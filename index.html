@@ -1,0 +1,1490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>SSC Mate – Exam Preparation</title>
+
+<!-- Tailwind -->
+<script src="https://cdn.tailwindcss.com"></script>
+<!-- Font Awesome -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<!-- Razorpay -->
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
+<script>
+// Fix: guard tailwind.config — runs only after Tailwind CDN loads
+(function tryConfig(){
+  if(window.tailwind){
+    tailwind.config={darkMode:'class',theme:{extend:{fontFamily:{sans:["Nunito","sans-serif"],display:["Baloo 2","sans-serif"]}}}};
+  } else {
+    setTimeout(tryConfig, 50);
+  }
+})();
+</script>
+
+<style>
+*{-webkit-tap-highlight-color:transparent;box-sizing:border-box}
+body{-webkit-user-select:none;user-select:none;overscroll-behavior:none;font-family:"Nunito",sans-serif}
+input,textarea{-webkit-user-select:text!important;user-select:text!important}
+:root{--h:100dvh;--nav:65px}
+#root{height:var(--h);overflow:hidden;position:relative;max-width:480px;margin:0 auto;background:#f1f5f9}
+
+/* ✅ FIX: .hidden works on ALL elements, not just .page */
+.hidden { display: none !important; }
+
+.page{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;background:#f1f5f9;padding-bottom:calc(var(--nav) + 8px)}
+.page::-webkit-scrollbar{display:none}
+/* Animations */
+@keyframes slideUp{from{transform:translateY(24px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes bannerSlide{from{transform:translateX(8px);opacity:0}to{transform:translateX(0);opacity:1}}
+.slide-up{animation:slideUp .3s ease forwards}
+.fade-in{animation:fadeIn .25s ease forwards}
+.spinner{width:20px;height:20px;border:2.5px solid #e2e8f0;border-top-color:#f97316;border-radius:50%;animation:spin .7s linear infinite}
+.live-dot{width:8px;height:8px;background:#ef4444;border-radius:50%;animation:pulse 1.2s infinite}
+/* Banner dots */
+.bdot{width:6px;height:6px;border-radius:3px;background:rgba(255,255,255,.5);transition:all .3s}
+.bdot.on{width:18px;background:#fff}
+/* Bottom nav */
+#bottomNav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:#fff;border-top:1px solid #e2e8f0;z-index:100;padding-bottom:env(safe-area-inset-bottom)}
+.nav-btn{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:10px 0;flex:1;transition:all .2s}
+.nav-btn i,.nav-btn span{color:#94a3b8;transition:color .2s}
+.nav-btn.on i,.nav-btn.on span{color:#f97316}
+/* Cards */
+.card{background:#fff;border-radius:16px;box-shadow:0 2px 12px rgba(30,58,95,.07)}
+/* OTP */
+.otp-input{width:44px;height:52px;text-align:center;font-size:22px;font-weight:800;font-family:"Baloo 2",sans-serif;color:#1e3a5f;border:2px solid #e2e8f0;border-radius:12px;outline:none;transition:all .2s}
+.otp-input:focus{border-color:#f97316;box-shadow:0 0 0 3px rgba(249,115,22,.1)}
+/* Options */
+.opt-btn{width:100%;text-align:left;padding:14px 16px;border:2px solid #e2e8f0;border-radius:12px;display:flex;align-items:center;gap:12px;font-size:14px;font-weight:600;color:#1e293b;background:#fff;cursor:pointer;transition:all .15s}
+.opt-btn:hover{border-color:#cbd5e1}
+.opt-btn.sel{border-color:#1e3a5f;background:#eff6ff}
+.opt-btn.ok{border-color:#16a34a;background:#f0fdf4}
+.opt-btn.bad{border-color:#dc2626;background:#fef2f2}
+/* Protected overlay */
+.prot-overlay{position:absolute;inset:0;pointer-events:none;z-index:20;background:repeating-linear-gradient(-45deg,transparent,transparent 80px,rgba(30,58,95,.025) 80px,rgba(30,58,95,.025) 160px)}
+/* Ebook viewer */
+#ebookOverlay{position:fixed;inset:0;z-index:200;background:#1e293b;display:flex;flex-direction:column;overflow:hidden}
+/* Test overlay */
+#testOverlay{position:fixed;inset:0;z-index:200;background:#f1f5f9;display:flex;flex-direction:column;overflow:hidden}
+#testOverlay::-webkit-scrollbar{display:none}
+/* Chat */
+#chatOverlay{position:fixed;inset:0;z-index:250;background:rgba(0,0,0,.55);display:flex;flex-direction:column;justify-content:flex-end}
+.chat-bubble{border-radius:18px;padding:10px 14px;max-width:82%;font-size:14px;line-height:1.5}
+/* Toast */
+#toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#1e293b;color:#fff;padding:10px 20px;border-radius:24px;font-size:13px;font-weight:700;z-index:999;white-space:nowrap;opacity:0;transition:opacity .3s;pointer-events:none}
+#toast.show{opacity:1}
+/* Sheet */
+#sheet{position:fixed;inset:0;z-index:350;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center}
+#sheetBox{background:#fff;border-radius:24px 24px 0 0;width:100%;max-width:480px;max-height:85vh;overflow-y:auto;padding:8px 20px 32px}
+#sheetBox::-webkit-scrollbar{display:none}
+</style>
+</head>
+<body>
+<div id="root">
+
+<!-- ═══════════ SPLASH ═══════════ -->
+<div id="splash" style="position:absolute;inset:0;background:linear-gradient(155deg,#0a1628 0%,#1e3a5f 50%,#f97316 140%);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:500">
+  <div style="width:90px;height:90px;background:#fff;border-radius:24px;display:flex;align-items:center;justify-content:center;box-shadow:0 20px 60px rgba(249,115,22,.3);margin-bottom:20px">
+    <svg width="50" height="50" viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M25 8L5 18L25 28L45 18L25 8Z" fill="#1e3a5f" stroke="#1e3a5f" stroke-width="1.5" stroke-linejoin="round"/>
+      <path d="M12 24V34C12 34 17 40 25 40C33 40 38 34 38 34V24" stroke="#1e3a5f" stroke-width="2.5" stroke-linecap="round"/>
+      <path d="M42 18V28" stroke="#f97316" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="42" cy="30" r="2" fill="#f97316"/>
+    </svg>
+  </div>
+  <div style="font-family:'Baloo 2',sans-serif;font-size:36px;font-weight:800;color:#fff;letter-spacing:-1px">SSC <span style="color:#f97316">Mate</span></div>
+  <div style="color:rgba(255,255,255,.65);font-size:13px;margin-top:6px">Your Exam Preparation Partner</div>
+  <div style="display:flex;gap:6px;margin-top:40px">
+    <div class="bdot on"></div><div class="bdot"></div><div class="bdot"></div>
+  </div>
+</div>
+
+<!-- ═══════════ MAIN APP ═══════════ -->
+<div id="mainApp" class="hidden" style="position:absolute;inset:0;display:flex;flex-direction:column">
+
+  <!-- TOP BAR -->
+  <div id="topBar" style="background:#1e3a5f;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;box-shadow:0 4px 20px rgba(30,58,95,.3)">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div id="backBtnWrap" class="hidden">
+        <button onclick="goBack()" style="width:36px;height:36px;background:rgba(255,255,255,.15);border:none;border-radius:10px;color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+      </div>
+      <div id="logoWrap">
+        <div style="font-family:'Baloo 2',sans-serif;font-size:24px;font-weight:800;color:#fff;line-height:1">SSC <span style="color:#f97316">Mate</span></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button onclick="toggleChat()" style="width:36px;height:36px;background:rgba(255,255,255,.15);border:none;border-radius:10px;color:#fff;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect x="8" y="2" width="4" height="4" rx="1"/><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      </button>
+      <!-- Login button: visible when guest, hidden when logged in -->
+      <button id="topLoginBtn" onclick="showLoginSheet()" style="background:rgba(249,115,22,.9);border:none;border-radius:10px;color:#fff;font-size:12px;font-weight:800;cursor:pointer;padding:0 12px;height:36px;font-family:'Nunito',sans-serif;display:flex;align-items:center;gap:5px">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+        Login
+      </button>
+      <!-- User avatar: visible when logged in -->
+      <button id="topUserBtn" onclick="showScreen('profile')" style="display:none;width:36px;height:36px;background:rgba(249,115,22,.25);border:none;border-radius:10px;color:#f97316;cursor:pointer;overflow:hidden">
+        <img id="topUserPhoto" src="" style="width:100%;height:100%;object-fit:cover;display:none" onerror="this.style.display='none'">
+        <svg id="topUserIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- PAGES CONTAINER -->
+  <div style="flex:1;position:relative;overflow:hidden">
+
+    <!-- HOME -->
+    <div id="pageHome" class="page">
+      <!-- Banner Carousel -->
+      <div style="position:relative;margin:12px 14px;border-radius:18px;overflow:hidden;height:155px;background:#1e3a5f" id="bannerWrap">
+        <div id="bannerSlides" style="display:flex;height:100%;transition:transform .4s ease"></div>
+        <div id="bannerDots" style="position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;gap:5px"></div>
+      </div>
+
+      <!-- Quick Grid -->
+      <div style="padding:4px 14px 8px">
+        <div style="font-family:'Baloo 2',sans-serif;font-size:17px;font-weight:700;color:#1e293b;margin-bottom:12px">Quick Access</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+          <div onclick="showScreen('videos')" style="background:#fff;border-radius:16px;padding:16px 10px;text-align:center;cursor:pointer;box-shadow:0 2px 12px rgba(30,58,95,.07);transition:transform .15s" onmousedown="this.style.transform='scale(.97)'" onmouseup="this.style.transform=''">
+            <div style="width:48px;height:48px;background:#fff7ed;border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 8px">▶</div>
+            <div style="font-size:12px;font-weight:800;color:#1e293b;line-height:1.2">Video Classes</div>
+          </div>
+          <div onclick="showScreen('ebooks')" style="background:#fff;border-radius:16px;padding:16px 10px;text-align:center;cursor:pointer;box-shadow:0 2px 12px rgba(30,58,95,.07);transition:transform .15s" onmousedown="this.style.transform='scale(.97)'" onmouseup="this.style.transform=''">
+            <div style="width:48px;height:48px;background:#eff6ff;border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 8px">📖</div>
+            <div style="font-size:12px;font-weight:800;color:#1e293b;line-height:1.2">E-Books & PDFs</div>
+          </div>
+          <div onclick="showScreen('tests')" style="background:#fff;border-radius:16px;padding:16px 10px;text-align:center;cursor:pointer;box-shadow:0 2px 12px rgba(30,58,95,.07);transition:transform .15s" onmousedown="this.style.transform='scale(.97)'" onmouseup="this.style.transform=''">
+            <div style="width:48px;height:48px;background:#f0fdf4;border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 8px">✅</div>
+            <div style="font-size:12px;font-weight:800;color:#1e293b;line-height:1.2">Test Series</div>
+          </div>
+          <div onclick="filterAndShowEbooks('free')" style="background:#fff;border-radius:16px;padding:16px 10px;text-align:center;cursor:pointer;box-shadow:0 2px 12px rgba(30,58,95,.07);transition:transform .15s" onmousedown="this.style.transform='scale(.97)'" onmouseup="this.style.transform=''">
+            <div style="width:48px;height:48px;background:#fdf4ff;border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 8px">🎁</div>
+            <div style="font-size:12px;font-weight:800;color:#1e293b;line-height:1.2">Free Material</div>
+          </div>
+          <div onclick="showScreen('myAnalytics')" style="background:#fff;border-radius:16px;padding:16px 10px;text-align:center;cursor:pointer;box-shadow:0 2px 12px rgba(30,58,95,.07);transition:transform .15s" onmousedown="this.style.transform='scale(.97)'" onmouseup="this.style.transform=''">
+            <div style="width:48px;height:48px;background:#fff7ed;border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 8px">📈</div>
+            <div style="font-size:12px;font-weight:800;color:#1e293b;line-height:1.2">My Analytics</div>
+          </div>
+          <div onclick="showScreen('prevPapers')" style="background:#fff;border-radius:16px;padding:16px 10px;text-align:center;cursor:pointer;box-shadow:0 2px 12px rgba(30,58,95,.07);transition:transform .15s" onmousedown="this.style.transform='scale(.97)'" onmouseup="this.style.transform=''">
+            <div style="width:48px;height:48px;background:#f0f9ff;border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 8px">🕐</div>
+            <div style="font-size:12px;font-weight:800;color:#1e293b;line-height:1.2">Prev. Papers</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Videos -->
+      <div style="padding:8px 14px">
+        <div style="font-family:'Baloo 2',sans-serif;font-size:17px;font-weight:700;color:#1e293b;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center">
+          <span>📹 Latest Videos</span>
+          <button onclick="showScreen('videos')" style="background:none;border:none;color:#f97316;font-size:12px;font-weight:800;cursor:pointer">See All →</button>
+        </div>
+        <div id="homeVideoList"><div style="height:90px" class="shimmer-card"></div></div>
+      </div>
+
+      <!-- Recent Ebooks -->
+      <div style="padding:8px 14px">
+        <div style="font-family:'Baloo 2',sans-serif;font-size:17px;font-weight:700;color:#1e293b;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center">
+          <span>📚 E-Books & PDFs</span>
+          <button onclick="showScreen('ebooks')" style="background:none;border:none;color:#f97316;font-size:12px;font-weight:800;cursor:pointer">See All →</button>
+        </div>
+        <div id="homeEbookList"><div style="height:90px" class="shimmer-card"></div></div>
+      </div>
+    </div>
+
+    <!-- VIDEOS -->
+    <div id="pageVideos" class="page hidden">
+      <div style="background:linear-gradient(135deg,#1e3a5f,#172e4d);padding:20px 16px 16px">
+        <div style="font-family:'Baloo 2',sans-serif;font-size:22px;font-weight:800;color:#fff">📹 Video Classes</div>
+        <div style="color:rgba(255,255,255,.65);font-size:13px;margin-top:2px">Live & Recorded Lectures</div>
+      </div>
+      <div id="videoList" style="padding:14px;display:flex;flex-direction:column;gap:12px">
+        <div class="shimmer-card" style="height:180px"></div>
+        <div class="shimmer-card" style="height:180px"></div>
+      </div>
+    </div>
+
+    <!-- EBOOKS -->
+    <div id="pageEbooks" class="page hidden">
+      <div style="background:linear-gradient(135deg,#1e3a5f,#172e4d);padding:20px 16px 16px">
+        <div style="font-family:'Baloo 2',sans-serif;font-size:22px;font-weight:800;color:#fff">📚 E-Books & PDFs</div>
+        <div style="color:rgba(255,255,255,.65);font-size:13px;margin-top:2px">Study material for SSC exams</div>
+      </div>
+      <!-- Filter tabs -->
+      <div style="padding:12px 14px 4px;display:flex;gap:8px">
+        <button onclick="setEbookFilter('all')" id="efAll" style="background:#1e3a5f;color:#fff;border:none;border-radius:20px;padding:7px 16px;font-size:12px;font-weight:800;cursor:pointer;font-family:'Nunito',sans-serif">All</button>
+        <button onclick="setEbookFilter('free')" id="efFree" style="background:#f1f5f9;color:#64748b;border:none;border-radius:20px;padding:7px 16px;font-size:12px;font-weight:800;cursor:pointer;font-family:'Nunito',sans-serif">Free</button>
+        <button onclick="setEbookFilter('paid')" id="efPaid" style="background:#f1f5f9;color:#64748b;border:none;border-radius:20px;padding:7px 16px;font-size:12px;font-weight:800;cursor:pointer;font-family:'Nunito',sans-serif">Paid</button>
+      </div>
+      <div id="ebookList" style="padding:10px 14px;display:grid;grid-template-columns:repeat(2,1fr);gap:12px">
+        <div class="shimmer-card" style="height:180px"></div>
+        <div class="shimmer-card" style="height:180px"></div>
+      </div>
+    </div>
+
+    <!-- TESTS -->
+    <div id="pageTests" class="page hidden">
+      <div style="background:linear-gradient(135deg,#1e3a5f,#172e4d);padding:20px 16px 16px">
+        <div style="font-family:'Baloo 2',sans-serif;font-size:22px;font-weight:800;color:#fff">✅ Test Series</div>
+        <div style="color:rgba(255,255,255,.65);font-size:13px;margin-top:2px">Topic-wise practice tests</div>
+      </div>
+      <div id="testTopicList" style="padding:14px;display:flex;flex-direction:column;gap:10px">
+        <div class="shimmer-card" style="height:70px"></div>
+        <div class="shimmer-card" style="height:70px"></div>
+      </div>
+    </div>
+
+    <!-- MY ANALYTICS -->
+    <div id="pageMyAnalytics" class="page hidden">
+      <div style="background:linear-gradient(135deg,#1e3a5f,#172e4d);padding:20px 16px 16px">
+        <div style="font-family:'Baloo 2',sans-serif;font-size:22px;font-weight:800;color:#fff">📊 My Progress</div>
+      </div>
+      <div id="analyticsContent" style="padding:14px"></div>
+    </div>
+
+    <!-- PREV PAPERS (alias ebooks category) -->
+    <div id="pagePrevPapers" class="page hidden">
+      <div style="background:linear-gradient(135deg,#1e3a5f,#172e4d);padding:20px 16px 16px">
+        <div style="font-family:'Baloo 2',sans-serif;font-size:22px;font-weight:800;color:#fff">🕐 Previous Papers</div>
+      </div>
+      <div id="prevPaperList" style="padding:10px 14px;display:grid;grid-template-columns:repeat(2,1fr);gap:12px"></div>
+    </div>
+
+    <!-- PROFILE -->
+    <div id="pageProfile" class="page hidden">
+
+      <!-- ── GUEST profile (not logged in) ── -->
+      <div id="profileGuest">
+        <div style="background:linear-gradient(135deg,#1e3a5f,#172e4d);padding:40px 16px 32px;text-align:center">
+          <div style="width:80px;height:80px;background:rgba(255,255,255,.12);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:34px">👤</div>
+          <div style="font-family:'Baloo 2',sans-serif;font-size:22px;font-weight:800;color:#fff">Guest User</div>
+          <div style="color:rgba(255,255,255,.6);font-size:13px;margin-top:6px">Login karke apni progress save karo</div>
+        </div>
+        <div style="padding:16px;display:flex;flex-direction:column;gap:12px">
+          <!-- Google login card -->
+          <div style="background:#fff;border-radius:18px;padding:24px 20px;text-align:center;box-shadow:0 4px 24px rgba(30,58,95,.1)">
+            <div style="font-size:32px;margin-bottom:10px">🔐</div>
+            <div style="font-family:'Baloo 2',sans-serif;font-size:18px;font-weight:800;color:#1e293b;margin-bottom:6px">Login / Sign Up</div>
+            <div style="font-size:13px;color:#64748b;margin-bottom:20px;line-height:1.6">
+              Google se login karo aur apni sabhi purchases,<br>test history aur progress save karo.
+            </div>
+            <button onclick="signInWithGoogle()" style="width:100%;background:#fff;border:2px solid #e2e8f0;border-radius:14px;padding:14px 20px;font-size:15px;font-weight:800;font-family:'Nunito',sans-serif;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:12px;box-shadow:0 2px 10px rgba(0,0,0,.08);transition:all .2s" onmousedown="this.style.transform='scale(.98)'" onmouseup="this.style.transform=''">
+              <svg width="22" height="22" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-3.59-13.46-8.83l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>
+              Continue with Google
+            </button>
+          </div>
+
+          <!-- Benefits list -->
+          <div style="background:#fff;border-radius:16px;padding:18px;box-shadow:0 2px 12px rgba(30,58,95,.07)">
+            <div style="font-weight:800;color:#1e293b;margin-bottom:12px;font-size:14px">Login karne ke fayde:</div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:#475569"><span style="font-size:18px">💳</span> Paid ebooks purchase aur save kar sakte ho</div>
+              <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:#475569"><span style="font-size:18px">📊</span> Test results aur progress track hoti rahegi</div>
+              <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:#475569"><span style="font-size:18px">🔄</span> Kabhi bhi login karo — sab kuch wahi milega</div>
+              <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:#475569"><span style="font-size:18px">🔒</span> Sirf aapka account — koi doosra access nahi kar sakta</div>
+            </div>
+          </div>
+
+          <!-- Social Links (visible even as guest) -->
+          <div style="background:#fff;border-radius:16px;padding:16px;box-shadow:0 2px 12px rgba(30,58,95,.07)">
+            <div style="font-family:'Baloo 2',sans-serif;font-size:15px;font-weight:700;color:#1e293b;margin-bottom:12px">Connect With Us</div>
+            <div id="socialLinksGuest" style="display:flex;flex-wrap:wrap;gap:10px"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── LOGGED IN profile ── -->
+      <div id="profileLoggedIn" style="display:none">
+        <div style="background:linear-gradient(135deg,#1e3a5f,#172e4d);padding:28px 16px 20px;text-align:center">
+          <div id="avatarCircle" style="width:72px;height:72px;background:linear-gradient(135deg,#f97316,#ea6a10);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;overflow:hidden">
+            <img id="avatarImg" src="" style="width:100%;height:100%;object-fit:cover;display:none">
+            <span id="avatarInitials" style="font-size:26px;font-weight:900;color:#fff;font-family:'Baloo 2',sans-serif">S</span>
+          </div>
+          <div id="profileName" style="font-family:'Baloo 2',sans-serif;font-size:20px;font-weight:800;color:#fff">Student</div>
+          <div id="profileEmail" style="color:rgba(255,255,255,.6);font-size:13px;margin-top:3px"></div>
+        </div>
+        <div style="padding:14px;display:flex;flex-direction:column;gap:10px">
+          <div onclick="showScreen('myAnalytics')" style="background:#fff;border-radius:14px;padding:16px;display:flex;align-items:center;gap:14px;cursor:pointer;box-shadow:0 2px 10px rgba(30,58,95,.07)">
+            <div style="width:44px;height:44px;background:#fff7ed;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px">📊</div>
+            <div style="flex:1"><div style="font-weight:800;color:#1e293b">My Test History</div><div style="font-size:12px;color:#64748b">View all attempts & scores</div></div>
+            <span style="color:#cbd5e1;font-size:18px">›</span>
+          </div>
+          <div onclick="showScreen('ebooks')" style="background:#fff;border-radius:14px;padding:16px;display:flex;align-items:center;gap:14px;cursor:pointer;box-shadow:0 2px 10px rgba(30,58,95,.07)">
+            <div style="width:44px;height:44px;background:#eff6ff;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px">📚</div>
+            <div style="flex:1"><div style="font-weight:800;color:#1e293b">My Library</div><div style="font-size:12px;color:#64748b">Purchased & free ebooks</div></div>
+            <span style="color:#cbd5e1;font-size:18px">›</span>
+          </div>
+          <div style="background:#fff;border-radius:16px;padding:16px;box-shadow:0 2px 12px rgba(30,58,95,.07)">
+            <div style="font-family:'Baloo 2',sans-serif;font-size:15px;font-weight:700;color:#1e293b;margin-bottom:12px">Connect With Us</div>
+            <div id="socialLinks" style="display:flex;flex-wrap:wrap;gap:10px"></div>
+          </div>
+          <button onclick="doLogout()" style="width:100%;background:#fef2f2;border:2px solid #fee2e2;color:#dc2626;border-radius:14px;padding:14px;font-size:14px;font-weight:800;font-family:'Nunito',sans-serif;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+            🚪 Logout
+          </button>
+        </div>
+      </div>
+
+    </div><!-- end pageProfile -->
+
+  </div><!-- end pages container -->
+
+  <!-- BOTTOM NAV -->
+  <div id="bottomNav" style="display:flex;background:#fff;border-top:1px solid #e2e8f0;flex-shrink:0;padding-bottom:env(safe-area-inset-bottom)">
+    <button class="nav-btn on" id="nb-home" onclick="showScreen('home')">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <span style="font-size:10px;font-weight:800">Home</span>
+    </button>
+    <button class="nav-btn" id="nb-videos" onclick="showScreen('videos')">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      <span style="font-size:10px;font-weight:800">Videos</span>
+    </button>
+    <button class="nav-btn" id="nb-ebooks" onclick="showScreen('ebooks')">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+      <span style="font-size:10px;font-weight:800">E-Books</span>
+    </button>
+    <button class="nav-btn" id="nb-tests" onclick="showScreen('tests')">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      <span style="font-size:10px;font-weight:800">Tests</span>
+    </button>
+    <button class="nav-btn" id="nb-profile" onclick="showScreen('profile')">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span style="font-size:10px;font-weight:800">Profile</span>
+    </button>
+  </div>
+</div><!-- end mainApp -->
+
+<!-- ═══════════ EBOOK VIEWER OVERLAY ═══════════ -->
+<div id="ebookOverlay" class="hidden">
+  <div style="background:#1e3a5f;padding:10px 14px;display:flex;align-items:center;justify-content:space-between">
+    <div style="display:flex;align-items:center;gap:10px">
+      <button onclick="closeEbookViewer()" style="background:rgba(255,255,255,.15);border:none;color:#fff;width:34px;height:34px;border-radius:10px;cursor:pointer;font-size:15px">←</button>
+      <div id="ebookViewerTitle" style="color:#fff;font-weight:800;font-size:15px;max-width:220px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis"></div>
+    </div>
+    <div style="background:#fef3c7;color:#b45309;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:800">🔒 Protected</div>
+  </div>
+  <div style="flex:1;position:relative;overflow:hidden">
+    <div class="prot-overlay"></div>
+    <div id="ebookWatermark" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-30deg);font-size:18px;font-weight:900;color:rgba(30,58,95,.07);pointer-events:none;z-index:25;white-space:nowrap;font-family:'Baloo 2',sans-serif">SSC Mate</div>
+    <iframe id="ebookFrame" src="" style="width:100%;height:100%;border:none" sandbox="allow-same-origin allow-scripts" allowfullscreen></iframe>
+  </div>
+</div>
+
+<!-- ═══════════ TEST OVERLAY ═══════════ -->
+<div id="testOverlay" class="hidden">
+  <!-- Test Header -->
+  <div id="testHeader" style="background:#1e3a5f;padding:14px 16px;flex-shrink:0">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div>
+        <div id="testTopicTitle" style="color:#fff;font-weight:800;font-size:16px"></div>
+        <div id="testQCounter" style="color:rgba(255,255,255,.65);font-size:12px;margin-top:2px">Q 1 / 10</div>
+      </div>
+      <div id="testTimerDisplay" style="background:rgba(249,115,22,.25);border:1px solid rgba(249,115,22,.5);padding:6px 14px;border-radius:20px;font-family:'Baloo 2',sans-serif;font-size:18px;font-weight:800;color:#fb923c">30:00</div>
+    </div>
+    <div style="background:rgba(255,255,255,.15);height:5px;border-radius:3px;overflow:hidden">
+      <div id="testProgressBar" style="background:linear-gradient(90deg,#f97316,#fb923c);height:100%;width:10%;border-radius:3px;transition:width .3s"></div>
+    </div>
+  </div>
+  <!-- Test Body -->
+  <div id="testBody" style="flex:1;padding:16px;overflow-y:auto;-webkit-overflow-scrolling:touch;min-height:0"></div>
+  <!-- Test Footer -->
+  <div id="testFooter" style="background:#fff;border-top:1px solid #e2e8f0;padding:12px 16px;display:flex;gap:10px;flex-shrink:0;padding-bottom:env(safe-area-inset-bottom)">
+    <button onclick="prevQ()" id="btnPrevQ" style="flex:1;background:#f1f5f9;border:none;border-radius:12px;padding:13px;font-size:14px;font-weight:800;font-family:'Nunito',sans-serif;cursor:pointer;color:#64748b">
+      ← Prev
+    </button>
+    <button onclick="nextQ()" id="btnNextQ" style="flex:2;background:linear-gradient(135deg,#1e3a5f,#2563eb);color:#fff;border:none;border-radius:12px;padding:13px;font-size:14px;font-weight:800;font-family:'Nunito',sans-serif;cursor:pointer">
+      Next →
+    </button>
+    <button onclick="confirmSubmit()" id="btnSubmit" style="flex:2;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;border:none;border-radius:12px;padding:13px;font-size:14px;font-weight:800;font-family:'Nunito',sans-serif;cursor:pointer;display:none">
+      Submit ✓
+    </button>
+  </div>
+</div>
+
+<!-- ═══════════ AI CHAT OVERLAY ═══════════ -->
+<div id="chatOverlay" class="hidden" onclick="if(event.target===this)toggleChat()">
+  <div style="background:#fff;border-radius:24px 24px 0 0;width:100%;max-width:480px;margin:0 auto;height:75vh;display:flex;flex-direction:column;overflow:hidden">
+    <div style="padding:14px 18px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:#fff">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:38px;height:38px;background:linear-gradient(135deg,#1e3a5f,#2563eb);border-radius:12px;display:flex;align-items:center;justify-content:center">
+          🤖
+        </div>
+        <div>
+          <div style="font-weight:900;color:#1e293b">SSC AI Assistant</div>
+          <div style="font-size:11px;color:#16a34a;font-weight:700">● Online</div>
+        </div>
+      </div>
+      <button onclick="toggleChat()" style="background:#f1f5f9;border:none;width:32px;height:32px;border-radius:8px;cursor:pointer;color:#64748b;font-size:16px">✕</button>
+    </div>
+    <div id="chatMessages" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;background:#f8fafc;min-height:0"></div>
+    <div style="padding:12px 14px;border-top:1px solid #e2e8f0;display:flex;gap:8px;padding-bottom:calc(12px + env(safe-area-inset-bottom));flex-shrink:0;background:#fff">
+      <input id="chatInput" type="text" placeholder="Ask anything about SSC..." style="flex:1;border:2px solid #e2e8f0;border-radius:12px;padding:10px 14px;font-size:14px;font-family:'Nunito',sans-serif;outline:none;font-weight:600" onkeydown="if(event.key==='Enter')sendChatMsg()">
+      <button onclick="sendChatMsg()" style="background:linear-gradient(135deg,#f97316,#ea6a10);border:none;color:#fff;width:44px;height:44px;border-radius:12px;cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ BOTTOM SHEET (Payment/Coupon) ═══════════ -->
+<div id="sheet" class="hidden" onclick="if(event.target===this)closeSheet()">
+  <div id="sheetBox">
+    <div style="width:40px;height:4px;background:#e2e8f0;border-radius:2px;margin:0 auto 16px"></div>
+    <div id="sheetContent"></div>
+  </div>
+</div>
+
+<!-- ═══════════ GOOGLE LOGIN SHEET ═══════════ -->
+<div id="loginSheet" style="position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.5);display:none;align-items:flex-end;justify-content:center" onclick="if(event.target===this)closeLoginSheet()">
+  <div style="background:#fff;border-radius:24px 24px 0 0;width:100%;max-width:480px;padding:24px 20px 36px;animation:slideUp .3s ease">
+    <div style="width:40px;height:4px;background:#e2e8f0;border-radius:2px;margin:0 auto 20px"></div>
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="font-size:36px;margin-bottom:8px" id="loginSheetIcon">🔐</div>
+      <div style="font-family:'Baloo 2',sans-serif;font-size:20px;font-weight:800;color:#1e293b" id="loginSheetTitle">Login Required</div>
+      <div style="font-size:13px;color:#64748b;margin-top:5px;line-height:1.5" id="loginSheetMsg">Apni purchase save karne ke liye Google se login karo</div>
+    </div>
+    <button onclick="signInWithGoogle()" id="googleLoginBtn" style="width:100%;background:#fff;border:2px solid #e2e8f0;border-radius:14px;padding:15px 20px;font-size:15px;font-weight:800;font-family:'Nunito',sans-serif;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:12px;box-shadow:0 2px 10px rgba(0,0,0,.08);margin-bottom:10px">
+      <svg width="22" height="22" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-3.59-13.46-8.83l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      Continue with Google
+    </button>
+    <button onclick="closeLoginSheet()" style="width:100%;background:none;border:none;color:#94a3b8;font-size:13px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;padding:10px">
+      Abhi nahi — Guest ke roop mein continue karo
+    </button>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- WhatsApp FAB -->
+<div id="waFab" onclick="openWhatsApp()" style="position:fixed;bottom:85px;right:16px;width:52px;height:52px;background:#25d366;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 6px 20px rgba(37,211,102,.4);z-index:150;transition:transform .2s" onmousedown="this.style.transform='scale(.9)'" onmouseup="this.style.transform=''">
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
+</div>
+
+<!-- ════════════════════════════════════════
+     JAVASCRIPT
+════════════════════════════════════════ -->
+<script>
+// ══════════════════════════════════════
+// ⚙️  CONFIGURATION — Fill these values
+// ══════════════════════════════════════
+const FB_CONFIG = {
+  apiKey: "AIzaSyA4QTpdBvip1L-RvVEp5IR-tUn4ZQw9UxY",
+  authDomain: "sikshapath-education.firebaseapp.com",
+  databaseURL: "https://sikshapath-education-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "sikshapath-education",
+  storageBucket: "sikshapath-education.firebasestorage.app",
+  messagingSenderId: "274162437758",
+  appId: "1:274162437758:web:e153b0eba458598533522f"
+};
+const RZP_KEY   = "rzp_test_SpCl6ByUfA8WR0"; // Razorpay Key ID
+const GROQ_KEY  = "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";      // Groq API Key
+const WA_NUMBER = "917759843674";              // WhatsApp (91 + 10 digits, no +)
+
+// ══════════════════════════════════════
+// 🔥 FIREBASE INIT
+// ══════════════════════════════════════
+firebase.initializeApp(FB_CONFIG);
+const auth = firebase.auth();
+const db   = firebase.firestore();
+// ✅ Keep session alive across browser restarts
+auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+
+const googleProvider = new firebase.auth.GoogleAuthProvider();
+
+let _snap = [];
+let _splashDone = false;
+let _pendingAction = null; // action to run after login
+
+// ══════════════════════════════════════
+// 📦 APP STATE
+// ══════════════════════════════════════
+const S = {
+  user: null,
+  profile: null,
+  screen: 'home',
+  history: [],
+  banners: [], videos: [], ebooks: [], allEbooks: [],
+  ebookFilter: 'all', topics: [], socialLinks: [], purchases: [],
+  payingEbook: null, couponApplied: null, payFinal: 0,
+  testTopic: null, testQs: [], testIdx: 0, testAnswers: {},
+  testTimer: null, testSecs: 0, lastTestResult: null,
+  chatMsgs: [], chatLoading: false
+};
+
+// ══════════════════════════════════════
+// 🔐 AUTH — Google Sign-in
+// ══════════════════════════════════════
+
+// Google Sign-in (popup)
+async function signInWithGoogle() {
+  const btn = document.getElementById('googleLoginBtn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<div class="spinner" style="display:inline-block;margin-right:8px"></div>Signing in...'; }
+  try {
+    const result = await auth.signInWithPopup(googleProvider);
+    closeLoginSheet();
+    // _pendingAction runs in onAuthStateChanged after user is set
+  } catch(e) {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<svg width="22" height="22" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-3.59-13.46-8.83l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg> Continue with Google'; }
+    if (e.code !== 'auth/popup-closed-by-user') toast('Login failed. Try again.', 'error');
+  }
+}
+
+// Show login sheet with custom message
+function showLoginSheet(title='Login Required', msg='Isse access karne ke liye Google se login karo', icon='🔐', action=null) {
+  _pendingAction = action;
+  document.getElementById('loginSheetTitle').textContent = title;
+  document.getElementById('loginSheetMsg').textContent   = msg;
+  document.getElementById('loginSheetIcon').textContent  = icon;
+  // Reset button
+  const btn = document.getElementById('googleLoginBtn');
+  btn.disabled = false;
+  btn.innerHTML = '<svg width="22" height="22" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-3.59-13.46-8.83l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg> Continue with Google';
+  document.getElementById('loginSheet').style.display = 'flex';
+}
+
+function closeLoginSheet() {
+  document.getElementById('loginSheet').style.display = 'none';
+}
+
+// ══════════════════════════════════════
+// 👤 AUTH STATE — Runs on every page load
+// ══════════════════════════════════════
+auth.onAuthStateChanged(async user => {
+  S.user = user;
+
+  if (!_splashDone) {
+    // First load — show app after splash regardless of login state
+    _splashDone = true;
+    const splash = document.getElementById('splash');
+    if (splash) {
+      splash.style.transition = 'opacity 0.4s';
+      splash.style.opacity = '0';
+      setTimeout(() => { splash.remove(); }, 400);
+    }
+    document.getElementById('mainApp').classList.remove('hidden');
+  }
+
+  if (user) {
+    // ── LOGGED IN ──
+    // Save/update profile in Firestore
+    const ref = db.collection('users').doc(user.uid);
+    const snap = await ref.get();
+    if (!snap.exists) {
+      await ref.set({
+        name: user.displayName||'',
+        email: user.email||'',
+        photo: user.photoURL||'',
+        role: 'user',
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    } else {
+      // Update last login & photo
+      await ref.update({ lastLogin: firebase.firestore.FieldValue.serverTimestamp(), photo: user.photoURL||'', name: user.displayName||'' });
+    }
+    S.profile = (await ref.get()).data();
+
+    // Load purchases realtime
+    _snap.push(db.collection('purchases').where('userId','==',user.uid).onSnapshot(s => {
+      S.purchases = s.docs.map(d=>({id:d.id,...d.data()}));
+      // Re-render ebooks if on that screen to update lock status
+      if (S.screen==='ebooks') renderEbooks();
+      if (S.screen==='home') renderHomeEbooks();
+    }));
+
+    updateProfileUI();
+
+    // Run pending action (e.g., open payment after login)
+    if (_pendingAction) { const fn = _pendingAction; _pendingAction = null; fn(); }
+
+  } else {
+    // ── GUEST MODE ──
+    S.profile = null;
+    S.purchases = [];
+    updateProfileUI();
+  }
+
+  // Start content listeners (runs for both guest and logged-in)
+  if (_snap.filter(u=>typeof u==='function').length < 4) startContentListeners();
+  loadSocialLinks();
+  if (S.screen === 'home') loadScreen('home');
+});
+
+// Update profile page UI based on auth state
+function updateProfileUI() {
+  const guest    = document.getElementById('profileGuest');
+  const loggedIn = document.getElementById('profileLoggedIn');
+  const topLogin = document.getElementById('topLoginBtn');
+  const topUser  = document.getElementById('topUserBtn');
+  if (!guest || !loggedIn) return;
+
+  if (S.user) {
+    // ── Logged in ──
+    guest.style.display    = 'none';
+    loggedIn.style.display = '';
+    if (topLogin) topLogin.style.display = 'none';
+    if (topUser)  topUser.style.display  = 'flex';
+
+    // Show Google profile photo in top bar
+    const topPhoto = document.getElementById('topUserPhoto');
+    const topIcon  = document.getElementById('topUserIcon');
+    if (S.user.photoURL && topPhoto) {
+      topPhoto.src = S.user.photoURL;
+      topPhoto.style.display = 'block';
+      if (topIcon) topIcon.style.display = 'none';
+    }
+
+    // Fill profile page details
+    const img      = document.getElementById('avatarImg');
+    const initials = document.getElementById('avatarInitials');
+    if (img && S.user.photoURL) {
+      img.src = S.user.photoURL;
+      img.style.display = 'block';
+      if (initials) initials.style.display = 'none';
+    }
+    const nm = S.user.displayName || S.user.email || 'Student';
+    if (document.getElementById('profileName'))  document.getElementById('profileName').textContent  = nm;
+    if (document.getElementById('profileEmail')) document.getElementById('profileEmail').textContent = S.user.email || '';
+
+  } else {
+    // ── Guest ──
+    guest.style.display    = '';
+    loggedIn.style.display = 'none';
+    if (topLogin) topLogin.style.display = 'flex';
+    if (topUser)  topUser.style.display  = 'none';
+  }
+}
+
+async function doLogout() {
+  if (!confirm('Logout karna chahte hain?')) return;
+  _snap.forEach(u => typeof u==='function' && u());
+  _snap = [];
+  S.purchases = [];
+  S.user = null;
+  await auth.signOut();
+  toast('Logout ho gaye', '');
+  showScreen('home');
+}
+
+// ══════════════════════════════════════
+// 📡 REALTIME LISTENERS
+// ══════════════════════════════════════
+function startContentListeners() {
+  // Banners
+  const u1 = db.collection('banners').where('active','==',true).orderBy('order','asc').onSnapshot(s => {
+    S.banners = s.docs.map(d=>({id:d.id,...d.data()}));
+    if (S.screen==='home') renderBanners();
+  }, ()=>{
+    db.collection('banners').where('active','==',true).onSnapshot(s => {
+      S.banners = s.docs.map(d=>({id:d.id,...d.data()}));
+      if (S.screen==='home') renderBanners();
+    });
+  });
+  // Videos
+  const u2 = db.collection('videos').orderBy('createdAt','desc').onSnapshot(s => {
+    S.videos = s.docs.map(d=>({id:d.id,...d.data()}));
+    if (S.screen==='home') renderHomeVideos();
+    if (S.screen==='videos') renderVideos();
+  }, ()=>{
+    db.collection('videos').onSnapshot(s => {
+      S.videos = s.docs.map(d=>({id:d.id,...d.data()}));
+      if (S.screen==='home') renderHomeVideos();
+      if (S.screen==='videos') renderVideos();
+    });
+  });
+  // Ebooks
+  const u3 = db.collection('ebooks').where('active','==',true).orderBy('createdAt','desc').onSnapshot(s => {
+    S.allEbooks = s.docs.map(d=>({id:d.id,...d.data()}));
+    applyEbookFilter();
+    if (S.screen==='home') renderHomeEbooks();
+    if (S.screen==='ebooks') renderEbooks();
+  }, ()=>{
+    db.collection('ebooks').onSnapshot(s => {
+      S.allEbooks = s.docs.map(d=>({id:d.id,...d.data()}));
+      applyEbookFilter();
+      if (S.screen==='home') renderHomeEbooks();
+    });
+  });
+  // Tests
+  const u4 = db.collection('testTopics').orderBy('createdAt','asc').onSnapshot(s => {
+    S.topics = s.docs.map(d=>({id:d.id,...d.data()}));
+    if (S.screen==='tests') renderTopics();
+  }, ()=>{
+    db.collection('testTopics').onSnapshot(s => {
+      S.topics = s.docs.map(d=>({id:d.id,...d.data()}));
+      if (S.screen==='tests') renderTopics();
+    });
+  });
+  _snap.push(u1, u2, u3, u4);
+}
+
+// ══════════════════════════════════════
+// 🧭 NAVIGATION
+// ══════════════════════════════════════
+const PAGES = ['home','videos','ebooks','tests','myAnalytics','prevPapers','profile'];
+const PAGE_MAP = {home:'pageHome',videos:'pageVideos',ebooks:'pageEbooks',tests:'pageTests',myAnalytics:'pageMyAnalytics',prevPapers:'pagePrevPapers',profile:'pageProfile'};
+const NAV_MAP  = {home:'nb-home',videos:'nb-videos',ebooks:'nb-ebooks',tests:'nb-tests',profile:'nb-profile'};
+
+function showScreen(name) {
+  if (S.history[S.history.length-1] !== name) S.history.push(name);
+  loadScreen(name);
+}
+
+function loadScreen(name) {
+  S.screen = name;
+  PAGES.forEach(p => { const el=document.getElementById(PAGE_MAP[p]); if(el) el.classList.add('hidden'); });
+  const target = document.getElementById(PAGE_MAP[name]);
+  if (target) { target.classList.remove('hidden'); target.classList.add('slide-up'); }
+
+  // Back button
+  const noBacks = ['home','videos','ebooks','tests','profile'];
+  document.getElementById('backBtnWrap').classList.toggle('hidden', noBacks.includes(name));
+  document.getElementById('logoWrap').classList.toggle('hidden', !noBacks.includes(name));
+
+  // Bottom nav active
+  Object.values(NAV_MAP).forEach(id => document.getElementById(id)?.classList.remove('on'));
+  if (NAV_MAP[name]) document.getElementById(NAV_MAP[name]).classList.add('on');
+
+  // Page-specific load
+  if (name==='home') { renderBanners(); renderHomeVideos(); renderHomeEbooks(); }
+  if (name==='videos') renderVideos();
+  if (name==='ebooks') renderEbooks();
+  if (name==='tests') renderTopics();
+  if (name==='myAnalytics') renderAnalytics();
+  if (name==='prevPapers') renderPrevPapers();
+
+  // Scroll to top
+  const el = document.getElementById(PAGE_MAP[name]);
+  if (el) el.scrollTop = 0;
+}
+
+function goBack() {
+  S.history.pop();
+  const prev = S.history[S.history.length-1] || 'home';
+  loadScreen(prev);
+}
+
+function filterAndShowEbooks(type) { S.ebookFilter = type; showScreen('ebooks'); }
+
+// ══════════════════════════════════════
+// 🖼️ BANNERS
+// ══════════════════════════════════════
+let bannerIdx = 0, bannerTimer = null;
+
+function renderBanners() {
+  const wrap = document.getElementById('bannerSlides');
+  const dotsEl = document.getElementById('bannerDots');
+  if (!wrap) return;
+
+  const banners = S.banners.length ? S.banners : [{title:'Welcome to SSC Mate!',subtitle:'Your Ultimate Exam Partner',gradient:'linear-gradient(135deg,#f97316,#1e3a5f)'}];
+
+  wrap.innerHTML = banners.map((b,i) => `
+    <div style="min-width:100%;height:155px;flex-shrink:0;position:relative;cursor:pointer" onclick="${b.link?`window.open('${b.link}','_blank')`:''}">
+      ${b.imageUrl
+        ? `<img src="${b.imageUrl}" style="width:100%;height:100%;object-fit:cover">`
+        : `<div style="width:100%;height:100%;background:${b.gradient||'linear-gradient(135deg,#f97316 0%,#1e3a5f 100%)'};display:flex;flex-direction:column;justify-content:center;padding:20px 24px">
+            <div style="font-family:'Baloo 2',sans-serif;font-size:26px;font-weight:800;color:#fff;line-height:1.1">${b.title||'SSC Mate'}</div>
+            <div style="color:rgba(255,255,255,.75);font-size:13px;margin-top:5px">${b.subtitle||''}</div>
+           </div>`
+      }
+    </div>`).join('');
+
+  dotsEl.innerHTML = banners.map((_,i) => `<div class="bdot ${i===0?'on':''}" onclick="goBanner(${i})"></div>`).join('');
+  bannerIdx = 0;
+
+  clearInterval(bannerTimer);
+  if (banners.length > 1) bannerTimer = setInterval(() => goBanner((bannerIdx+1) % banners.length), 3800);
+}
+
+function goBanner(i) {
+  bannerIdx = i;
+  const wrap = document.getElementById('bannerSlides');
+  if (wrap) wrap.style.transform = `translateX(-${i*100}%)`;
+  document.querySelectorAll('.bdot').forEach((d,j) => { d.classList.toggle('on', j===i); });
+}
+
+// ══════════════════════════════════════
+// 📹 VIDEOS
+// ══════════════════════════════════════
+function videoCard(v) {
+  const ytId = extractYtId(v.youtubeUrl||v.embedCode||'');
+  const thumb = v.thumbnail || (ytId ? `https://img.youtube.com/vi/${ytId}/hqdefault.jpg` : '');
+  return `
+    <div onclick="openVideoPlayer('${v.id}')" style="background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 2px 12px rgba(30,58,95,.08);cursor:pointer;transition:transform .15s" onmousedown="this.style.transform='scale(.98)'" onmouseup="this.style.transform=''">
+      <div style="position:relative;height:175px;background:#1e3a5f;overflow:hidden">
+        ${thumb ? `<img src="${thumb}" style="width:100%;height:100%;object-fit:cover">` : '<div style="height:100%;display:flex;align-items:center;justify-content:center;font-size:40px">📹</div>'}
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.25)">
+          <div style="width:52px;height:52px;background:#f97316;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(249,115,22,.5)">
+            ▶
+          </div>
+        </div>
+        ${v.type==='live' ? '<div style="position:absolute;top:10px;left:10px;background:#ef4444;color:#fff;font-size:11px;font-weight:800;padding:3px 8px;border-radius:6px;display:flex;align-items:center;gap:5px"><div class="live-dot"></div>LIVE</div>' : ''}
+      </div>
+      <div style="padding:12px 14px">
+        <div style="font-weight:800;font-size:14px;color:#1e293b;line-height:1.3;margin-bottom:4px">${v.title}</div>
+        <div style="font-size:12px;color:#94a3b8;display:flex;align-items:center;gap:8px">
+          <span>⊟${v.subject||'General'}</span>
+          <span>•</span>
+          <span>${v.type==='live'?'🔴 Live Class':'📹 Recorded'}</span>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderVideos() { document.getElementById('videoList').innerHTML = S.videos.length ? S.videos.map(videoCard).join('') : '<div style="text-align:center;padding:40px;color:#94a3b8">📹No videos yet</div>'; }
+
+function renderHomeVideos() {
+  const el = document.getElementById('homeVideoList');
+  if (!el) return;
+  const vids = S.videos.slice(0,3);
+  el.innerHTML = vids.length ? vids.map(v=>{
+    const ytId = extractYtId(v.youtubeUrl||'');
+    const thumb = v.thumbnail||(ytId?`https://img.youtube.com/vi/${ytId}/mqdefault.jpg`:'');
+    return `<div onclick="openVideoPlayer('${v.id}')" style="display:flex;gap:12px;background:#fff;border-radius:14px;padding:12px;margin-bottom:10px;cursor:pointer;box-shadow:0 2px 8px rgba(30,58,95,.07)">
+      <div style="width:90px;height:64px;border-radius:10px;overflow:hidden;background:#1e3a5f;flex-shrink:0;position:relative">
+        ${thumb?`<img src="${thumb}" style="width:100%;height:100%;object-fit:cover">`:'<div style="height:100%;display:flex;align-items:center;justify-content:center;font-size:22px">📹</div>'}
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center"><div style="width:26px;height:26px;background:#f97316;border-radius:50%;display:flex;align-items:center;justify-content:center">▶</div></div>
+      </div>
+      <div style="flex:1;overflow:hidden">
+        <div style="font-weight:800;font-size:13px;color:#1e293b;line-height:1.3">${v.title}</div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:3px">${v.subject||'General'} ${v.type==='live'?'• 🔴 Live':''}</div>
+      </div>
+    </div>`;
+  }).join('') : '<div style="color:#94a3b8;font-size:13px;padding:8px">No videos yet.</div>';
+}
+
+async function openVideoPlayer(id) {
+  const v = S.videos.find(x=>x.id===id);
+  if (!v) return;
+
+  let embedHtml = '';
+  const ytId = extractYtId(v.youtubeUrl||v.youtubeId||'');
+  if (v.type==='live' && v.embedCode) {
+    embedHtml = v.embedCode;
+  } else if (ytId) {
+    embedHtml = `<iframe src="https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1" allow="autoplay;encrypted-media" allowfullscreen style="width:100%;aspect-ratio:16/9;border:none"></iframe>`;
+  } else {
+    toast('Video URL not available', 'error'); return;
+  }
+
+  openSheet(`
+    <div style="font-weight:900;font-size:16px;color:#1e293b;margin-bottom:12px">${v.title}</div>
+    ${embedHtml}
+    ${v.description?`<div style="font-size:13px;color:#64748b;margin-top:12px;line-height:1.6">${v.description}</div>`:''}
+  `, true);
+}
+
+function extractYtId(url) {
+  if (!url) return '';
+  if (/^[a-zA-Z0-9_-]{11}$/.test(url)) return url;
+  const m = url.match(/(?:v=|\/embed\/|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  return m ? m[1] : '';
+}
+
+// ══════════════════════════════════════
+// 📚 EBOOKS
+// ══════════════════════════════════════
+function setEbookFilter(f) {
+  S.ebookFilter = f;
+  ['All','Free','Paid'].forEach(x => {
+    const el = document.getElementById('ef'+x);
+    el.style.background = f===x.toLowerCase()?'#1e3a5f':'#f1f5f9';
+    el.style.color = f===x.toLowerCase()?'#fff':'#64748b';
+  });
+  applyEbookFilter();
+  renderEbooks();
+}
+
+function applyEbookFilter() {
+  S.ebooks = S.ebookFilter==='all' ? S.allEbooks
+    : S.allEbooks.filter(b => S.ebookFilter==='free' ? b.type==='free' : b.type==='paid');
+}
+
+function ebookCard(b) {
+  const isPurchased = S.purchases.some(p=>p.ebookId===b.id);
+  const discPct = b.strikePrice&&b.price ? Math.round((1-b.price/b.strikePrice)*100) : 0;
+  return `
+    <div onclick="openEbookDetail('${b.id}')" style="background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 2px 12px rgba(30,58,95,.08);cursor:pointer;transition:transform .15s" onmousedown="this.style.transform='scale(.97)'" onmouseup="this.style.transform=''">
+      <div style="height:130px;background:linear-gradient(135deg,#1e3a5f,#2563eb);position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center">
+        ${b.coverUrl ? `<img src="${b.coverUrl}" style="width:100%;height:100%;object-fit:cover">` : '📖'}
+        <div style="position:absolute;top:8px;left:8px">
+          <span style="background:${b.type==='free'?'#16a34a':'#f97316'};color:#fff;font-size:10px;font-weight:800;padding:3px 8px;border-radius:6px">${b.type==='free'?'FREE':(isPurchased?'OWNED':'PAID')}</span>
+        </div>
+        ${isPurchased ? '<div style="position:absolute;top:8px;right:8px;background:#16a34a;color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center">✓</div>' : (b.type==='paid'?'<div style="position:absolute;top:8px;right:8px">🔒</div>':'')}
+        ${discPct>0 && !isPurchased ? `<div style="position:absolute;bottom:8px;right:8px;background:#ef4444;color:#fff;font-size:10px;font-weight:900;padding:3px 7px;border-radius:6px">${discPct}% OFF</div>` : ''}
+      </div>
+      <div style="padding:10px">
+        <div style="font-weight:800;font-size:13px;color:#1e293b;line-height:1.3;margin-bottom:6px;height:34px;overflow:hidden">${b.title}</div>
+        ${b.type==='free' ? '<div style="color:#16a34a;font-weight:900;font-size:14px">Free</div>'
+          : isPurchased ? '<div style="color:#16a34a;font-weight:800;font-size:13px">✅ Owned</div>'
+          : `<div style="display:flex;align-items:center;gap:6px"><span style="font-size:16px;font-weight:900;color:#f97316">₹${b.price}</span>${b.strikePrice?`<span style="font-size:12px;color:#94a3b8;text-decoration:line-through">₹${b.strikePrice}</span>`:''}</div>`}
+      </div>
+    </div>`;
+}
+
+function renderEbooks() {
+  const el = document.getElementById('ebookList');
+  if (!el) return;
+  el.innerHTML = S.ebooks.length ? S.ebooks.map(ebookCard).join('') : '<div style="grid-column:span 2;text-align:center;padding:40px;color:#94a3b8">📚No ebooks found</div>';
+}
+
+function renderHomeEbooks() {
+  const el = document.getElementById('homeEbookList');
+  if (!el) return;
+  const books = S.allEbooks.slice(0,3);
+  if (!books.length) { el.innerHTML='<div style="color:#94a3b8;font-size:13px;padding:8px">No ebooks yet.</div>'; return; }
+  el.innerHTML = '<div style="display:flex;gap:10px;overflow-x:auto;padding-bottom:4px">' + books.map(b=>`
+    <div onclick="openEbookDetail('${b.id}')" style="min-width:130px;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 2px 8px rgba(30,58,95,.07);cursor:pointer;flex-shrink:0">
+      <div style="height:80px;background:linear-gradient(135deg,#1e3a5f,#2563eb);display:flex;align-items:center;justify-content:center">
+        ${b.coverUrl?`<img src="${b.coverUrl}" style="width:100%;height:100%;object-fit:cover">`:'📖'}
+      </div>
+      <div style="padding:8px">
+        <div style="font-weight:800;font-size:12px;color:#1e293b;line-height:1.3">${b.title}</div>
+        <div style="margin-top:4px">${b.type==='free'?'<span style="color:#16a34a;font-weight:900;font-size:12px">Free</span>':`<span style="color:#f97316;font-weight:900;font-size:13px">₹${b.price}</span>`}</div>
+      </div>
+    </div>`).join('') + '</div>';
+}
+
+function renderPrevPapers() {
+  const el = document.getElementById('prevPaperList');
+  if (!el) return;
+  const papers = S.allEbooks.filter(b=>b.category==='prevPaper');
+  el.innerHTML = papers.length ? papers.map(ebookCard).join('') : '<div style="grid-column:span 2;text-align:center;padding:40px;color:#94a3b8">No previous papers yet</div>';
+}
+
+async function openEbookDetail(id) {
+  const b = S.allEbooks.find(x=>x.id===id);
+  if (!b) return;
+  const isPurchased = b.type==='free' || S.purchases.some(p=>p.ebookId===id);
+
+  // ── Free or already purchased → open directly, no login needed ──
+  if (isPurchased) { openEbookViewer(b); return; }
+
+  // ── Paid + not logged in → show Google login prompt ──
+  if (!S.user) {
+    showLoginSheet(
+      'Login karke Kharido 🔐',
+      `"${b.title}" kharidne ke liye Google se login karo. Bilkul free hai!`,
+      '🛍️',
+      () => openEbookDetail(id)  // retry after login
+    );
+    return;
+  }
+
+  // ── Logged in + paid + not purchased → show payment sheet ──
+  S.payingEbook = b;
+  S.payFinal = b.price;
+  S.couponApplied = null;
+  const discPct = b.strikePrice&&b.price ? Math.round((1-b.price/b.strikePrice)*100) : 0;
+
+  openSheet(`
+    <div style="display:flex;gap:12px;margin-bottom:16px;align-items:flex-start">
+      <div style="width:60px;height:80px;border-radius:10px;overflow:hidden;background:linear-gradient(135deg,#1e3a5f,#2563eb);flex-shrink:0;display:flex;align-items:center;justify-content:center">
+        ${b.coverUrl?`<img src="${b.coverUrl}" style="width:100%;height:100%;object-fit:cover">`:'📖'}
+      </div>
+      <div>
+        <div style="font-weight:900;font-size:15px;color:#1e293b;margin-bottom:4px">${b.title}</div>
+        <div style="font-size:12px;color:#64748b">${b.description||''}</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+          <span style="font-size:22px;font-weight:900;color:#f97316">₹${b.price}</span>
+          ${b.strikePrice?`<span style="font-size:14px;color:#94a3b8;text-decoration:line-through">₹${b.strikePrice}</span>`:''}
+          ${discPct>0?`<span style="background:#fef2f2;color:#dc2626;font-size:11px;font-weight:800;padding:2px 7px;border-radius:6px">${discPct}% OFF</span>`:''}
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:8px">
+      <input id="couponInput" type="text" placeholder="🎟️ Coupon code?" style="flex:1;border:2px solid #e2e8f0;border-radius:10px;padding:11px;font-size:14px;font-family:'Nunito',sans-serif;font-weight:700;outline:none" oninput="this.value=this.value.toUpperCase()">
+      <button onclick="applyCoupon()" style="background:#1e3a5f;color:#fff;border:none;border-radius:10px;padding:11px 16px;font-size:13px;font-weight:800;cursor:pointer;font-family:'Nunito',sans-serif">Apply</button>
+    </div>
+    <div id="couponMsg" style="font-size:12px;font-weight:700;min-height:18px;margin-bottom:12px"></div>
+    <div style="background:#f8fafc;border-radius:12px;padding:14px;margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;font-size:13px;color:#64748b;margin-bottom:6px"><span>Price</span><span>₹${b.price}</span></div>
+      <div id="discountRow" style="display:none;justify-content:space-between;font-size:13px;color:#16a34a;margin-bottom:6px"><span>Discount</span><span id="discAmt"></span></div>
+      <div style="border-top:1px dashed #e2e8f0;padding-top:8px;display:flex;justify-content:space-between;font-weight:900;font-size:16px;color:#1e293b"><span>Total</span><span id="totalAmt">₹${b.price}</span></div>
+    </div>
+    <button onclick="startPayment()" id="payBtn" style="width:100%;background:linear-gradient(135deg,#f97316,#ea6a10);color:#fff;border:none;border-radius:14px;padding:15px;font-size:15px;font-weight:900;cursor:pointer;font-family:'Nunito',sans-serif;box-shadow:0 6px 20px rgba(249,115,22,.3)">
+      🔓 Pay ₹${b.price} & Unlock
+    </button>
+  `);
+}
+
+async function applyCoupon() {
+  const code = document.getElementById('couponInput')?.value.trim();
+  if (!code) { toast('Coupon code daalen', 'error'); return; }
+  try {
+    const snap = await db.collection('coupons').where('code','==',code).where('active','==',true).get();
+    if (snap.empty) { document.getElementById('couponMsg').innerHTML='<span style="color:#dc2626">❌ Invalid or expired coupon</span>'; return; }
+    const c = {id:snap.docs[0].id,...snap.docs[0].data()};
+    if (c.maxUses!==-1 && (c.usedCount||0) >= c.maxUses) { document.getElementById('couponMsg').innerHTML='<span style="color:#dc2626">❌ Coupon limit reached</span>'; return; }
+    S.couponApplied = c;
+    const disc = Math.round(S.payingEbook.price * c.discount / 100);
+    S.payFinal = Math.max(0, S.payingEbook.price - disc);
+    document.getElementById('couponMsg').innerHTML = `<span style="color:#16a34a">✅ ${c.discount}% discount applied!</span>`;
+    document.getElementById('discountRow').style.display = 'flex';
+    document.getElementById('discAmt').textContent = '-₹'+disc;
+    document.getElementById('totalAmt').textContent = '₹'+S.payFinal;
+    document.getElementById('payBtn').textContent = `Pay ₹${S.payFinal} & Unlock`;
+    document.getElementById('payBtn').onclick = startPayment;
+  } catch(e) { toast('Error checking coupon', 'error'); }
+}
+
+function startPayment() {
+  if (!S.payingEbook) return;
+  if (S.payFinal === 0) { saveFreePurchase(); return; }
+  closeSheet();
+  const options = {
+    key: RZP_KEY,
+    amount: S.payFinal * 100,
+    currency: 'INR',
+    name: 'SSC Mate',
+    description: S.payingEbook.title,
+    handler: async resp => {
+      await savePurchase(resp.razorpay_payment_id);
+    },
+    prefill: { contact: S.user?.phoneNumber||'' },
+    theme: { color: '#f97316' }
+  };
+  const rzp = new Razorpay(options);
+  rzp.on('payment.failed', ()=>toast('Payment failed! Try again', 'error'));
+  rzp.open();
+}
+
+async function saveFreePurchase() {
+  await savePurchase('FREE_COUPON_' + Date.now());
+}
+
+async function savePurchase(paymentId) {
+  try {
+    await db.collection('purchases').add({ userId: S.user.uid, ebookId: S.payingEbook.id, ebookTitle: S.payingEbook.title, amount: S.payFinal, originalPrice: S.payingEbook.price, razorpayId: paymentId, coupon: S.couponApplied?.code||null, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+    if (S.couponApplied) await db.collection('coupons').doc(S.couponApplied.id).update({ usedCount: firebase.firestore.FieldValue.increment(1) });
+    S.purchases.push({ebookId: S.payingEbook.id});
+    closeSheet();
+    toast('🎉 Purchased! E-Book unlocked!', 'success');
+    setTimeout(()=>openEbookViewer(S.payingEbook), 800);
+  } catch(e) { toast('Error saving purchase', 'error'); }
+}
+
+function openEbookViewer(b) {
+  document.getElementById('ebookViewerTitle').textContent = b.title;
+  document.getElementById('ebookWatermark').textContent = `SSC Mate • ${(S.user?.phoneNumber||'').slice(-4)} • Protected`;
+  const phone = S.user?.phoneNumber||'';
+  document.getElementById('ebookWatermark').textContent = `SSC Mate | ${phone} | Protected`;
+
+  let src = '';
+  if (b.pdfUrl) {
+    if (b.pdfUrl.includes('drive.google.com')) {
+      const m = b.pdfUrl.match(/\/d\/([^/]+)/);
+      src = m ? `https://drive.google.com/file/d/${m[1]}/preview` : b.pdfUrl;
+    } else {
+      src = `https://docs.google.com/viewer?url=${encodeURIComponent(b.pdfUrl)}&embedded=true`;
+    }
+  }
+  document.getElementById('ebookFrame').src = src;
+  document.getElementById('ebookOverlay').classList.remove('hidden');
+
+  // Anti-piracy
+  document.addEventListener('contextmenu', blockContext, true);
+  document.addEventListener('keydown', blockPrintKey, true);
+}
+
+function blockContext(e) { e.preventDefault(); }
+function blockPrintKey(e) { if ((e.ctrlKey||e.metaKey) && (e.key==='p'||e.key==='s')) e.preventDefault(); }
+
+function closeEbookViewer() {
+  document.getElementById('ebookOverlay').classList.add('hidden');
+  document.getElementById('ebookFrame').src = '';
+  document.removeEventListener('contextmenu', blockContext, true);
+  document.removeEventListener('keydown', blockPrintKey, true);
+}
+
+// ══════════════════════════════════════
+// ✅ TESTS
+// ══════════════════════════════════════
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i=a.length-1;i>0;i--) { const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; }
+  return a;
+}
+
+function prepQ(q) {
+  const opts = [{k:'A',t:q.optA},{k:'B',t:q.optB},{k:'C',t:q.optC},{k:'D',t:q.optD}];
+  const correctText = opts.find(o=>o.k===q.correct)?.t;
+  const sh = shuffle(opts);
+  const newCorrect = ['A','B','C','D'][sh.findIndex(o=>o.t===correctText)];
+  return {...q, dOpts:sh, dCorrect:newCorrect};
+}
+
+function renderTopics() {
+  const el = document.getElementById('testTopicList');
+  if (!el) return;
+  el.innerHTML = S.topics.length ? S.topics.map(t=>`
+    <div onclick="loadTestTopic('${t.id}')" style="background:#fff;border-radius:16px;padding:18px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 12px rgba(30,58,95,.07);cursor:pointer;transition:transform .15s;border-left:4px solid #f97316" onmousedown="this.style.transform='translateX(4px)'" onmouseup="this.style.transform=''">
+      <div>
+        <div style="font-weight:800;font-size:15px;color:#1e293b">${t.name}</div>
+        <div style="font-size:12px;color:#94a3b8;margin-top:3px">${t.questionCount||'?'} Questions &bull; ${t.duration||30} min</div>
+      </div>
+      <div style="width:36px;height:36px;background:#fff7ed;border-radius:10px;display:flex;align-items:center;justify-content:center">
+        ›
+      </div>
+    </div>`).join('') : '<div style="text-align:center;padding:40px;color:#94a3b8">📋No test topics yet</div>';
+}
+
+async function loadTestTopic(tid) {
+  const topic = S.topics.find(t=>t.id===tid);
+  if (!topic) return;
+  toast('Loading questions...', '');
+  try {
+    const snap = await db.collection('testTopics').doc(tid).collection('questions').get();
+    if (snap.empty) { toast('No questions in this test yet', 'error'); return; }
+    const rawQs = snap.docs.map(d=>({id:d.id,...d.data()}));
+    S.testTopic = topic;
+    S.testQs = shuffle(rawQs).map(prepQ);
+    S.testIdx = 0;
+    S.testAnswers = {};
+    S.testSecs = (topic.duration||30)*60;
+    startTestUI();
+  } catch(e) { toast('Error loading test', 'error'); }
+}
+
+function startTestUI() {
+  const overlay = document.getElementById('testOverlay');
+  overlay.classList.remove('hidden');
+  // Scroll overlay to top
+  overlay.scrollTop = 0;
+  // Hide bottom nav while test is active
+  const nav = document.getElementById('bottomNav');
+  if (nav) nav.style.display = 'none';
+
+  document.getElementById('testTopicTitle').textContent = S.testTopic.name;
+  clearInterval(S.testTimer);
+  S.testTimer = setInterval(tickTimer, 1000);
+  renderCurrentQ();
+}
+
+function tickTimer() {
+  S.testSecs--;
+  const m=Math.floor(S.testSecs/60), s=S.testSecs%60;
+  const el = document.getElementById('testTimerDisplay');
+  if (el) { el.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`; el.style.color = S.testSecs<60?'#ef4444':'#fb923c'; }
+  if (S.testSecs<=0) { clearInterval(S.testTimer); submitTest(); }
+}
+
+function renderCurrentQ() {
+  const q = S.testQs[S.testIdx];
+  const total = S.testQs.length;
+  const pct = Math.round(((S.testIdx+1)/total)*100);
+
+  document.getElementById('testQCounter').textContent = `Q ${S.testIdx+1} / ${total}`;
+  document.getElementById('testProgressBar').style.width = pct+'%';
+
+  document.getElementById('testBody').innerHTML = `
+    <div style="background:#fff;border-radius:16px;padding:18px;box-shadow:0 2px 12px rgba(30,58,95,.07);margin-bottom:8px">
+      <div style="font-size:11px;font-weight:800;color:#f97316;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Question ${S.testIdx+1} of ${total}</div>
+      <div style="font-size:15px;font-weight:700;color:#1e293b;line-height:1.65;margin-bottom:18px">${q.question}</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        ${q.dOpts.map((o,i)=>{
+          const letter = ['A','B','C','D'][i];
+          const sel    = S.testAnswers[S.testIdx] === letter;
+          return `<button type="button" onclick="selectAns(${i})" style="width:100%;text-align:left;padding:13px 14px;border:2px solid ${sel?'#1e3a5f':'#e2e8f0'};background:${sel?'#eff6ff':'#fff'};border-radius:12px;display:flex;align-items:center;gap:12px;cursor:pointer;font-family:'Nunito',sans-serif;transition:all .15s">
+            <span style="width:30px;height:30px;border-radius:8px;background:${sel?'#1e3a5f':'#f1f5f9'};color:${sel?'#fff':'#64748b'};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0">${letter}</span>
+            <span style="font-size:14px;font-weight:600;color:#1e293b;line-height:1.4;word-break:break-word">${o.t}</span>
+          </button>`;
+        }).join('')}
+      </div>
+    </div>`;
+
+  // Scroll to top of testBody when question changes
+  const body = document.getElementById('testBody');
+  if (body) body.scrollTop = 0;
+
+  document.getElementById('btnPrevQ').style.display   = S.testIdx === 0          ? 'none' : '';
+  document.getElementById('btnNextQ').style.display   = S.testIdx === total - 1  ? 'none' : '';
+  document.getElementById('btnSubmit').style.display  = S.testIdx === total - 1  ? '' : 'none';
+}
+
+function selectAns(i) { S.testAnswers[S.testIdx] = ['A','B','C','D'][i]; renderCurrentQ(); }
+function prevQ() { if (S.testIdx>0) { S.testIdx--; renderCurrentQ(); } }
+function nextQ() { if (S.testIdx<S.testQs.length-1) { S.testIdx++; renderCurrentQ(); } }
+
+function confirmSubmit() {
+  const unanswered = S.testQs.length - Object.keys(S.testAnswers).length;
+  if (unanswered>0) {
+    openSheet(`<div style="text-align:center;padding:8px 0">
+      <div style="font-size:40px;margin-bottom:12px">⚠️</div>
+      <div style="font-weight:900;font-size:18px;color:#1e293b;margin-bottom:8px">Submit Test?</div>
+      <div style="color:#64748b;font-size:14px;margin-bottom:20px">${unanswered} question${unanswered>1?'s':''} unanswered.</div>
+      <div style="display:flex;gap:10px">
+        <button onclick="closeSheet()" style="flex:1;background:#f1f5f9;border:none;border-radius:12px;padding:13px;font-weight:800;font-family:'Nunito',sans-serif;cursor:pointer;color:#64748b">Review</button>
+        <button onclick="closeSheet();submitTest()" style="flex:1;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;border:none;border-radius:12px;padding:13px;font-weight:800;font-family:'Nunito',sans-serif;cursor:pointer">Submit</button>
+      </div>
+    </div>`);
+  } else { submitTest(); }
+}
+
+async function submitTest() {
+  clearInterval(S.testTimer);
+  let correct=0, wrong=0, skipped=0;
+  const details = S.testQs.map((q,i)=>{
+    const ans = S.testAnswers[i];
+    if (!ans) { skipped++; return {q,userAns:null,correct:false}; }
+    const isOk = ans === q.dCorrect;
+    isOk ? correct++ : wrong++;
+    return {q,userAns:ans,correct:isOk};
+  });
+
+  const score = correct;
+  const total = S.testQs.length;
+  S.lastTestResult = {score,total,correct,wrong,skipped,details,topic:S.testTopic.name};
+
+  // Save to Firestore only if logged in
+  if (S.user) {
+    try {
+      await db.collection('testResults').add({
+        userId: S.user.uid, topicId: S.testTopic.id, topicName: S.testTopic.name,
+        score, total, correct, wrong, skipped,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    } catch(e) {}
+  }
+
+  document.getElementById('testOverlay').classList.add('hidden');
+  // Restore bottom nav
+  const nav = document.getElementById('bottomNav');
+  if (nav) nav.style.display = 'flex';
+  showTestAnalysis(S.lastTestResult);
+}
+
+function showTestAnalysis({score,total,correct,wrong,skipped,details,topic}) {
+  const pct = Math.round((score/total)*100);
+  const grade = pct>=80?'🏆 Excellent!':pct>=60?'👍 Good Job!':pct>=40?'📈 Keep Going!':'💪 Practice More!';
+
+  document.getElementById('analyticsContent').innerHTML = `
+    <div style="background:linear-gradient(135deg,#1e3a5f,#172e4d);border-radius:20px;padding:24px;text-align:center;color:#fff;margin-bottom:16px">
+      <div style="font-size:13px;opacity:.7;margin-bottom:8px">${topic}</div>
+      <div style="font-family:'Baloo 2',sans-serif;font-size:32px;font-weight:800;margin-bottom:4px">${grade}</div>
+      <div style="width:100px;height:100px;border:5px solid rgba(249,115,22,.4);border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;margin:12px auto">
+        <div style="font-family:'Baloo 2',sans-serif;font-size:30px;font-weight:800;line-height:1">${score}</div>
+        <div style="font-size:12px;opacity:.7">/ ${total}</div>
+      </div>
+      <div style="font-size:20px;font-weight:900;color:#fb923c">${pct}%</div>
+      <div style="display:flex;gap:12px;justify-content:center;margin-top:14px">
+        <div style="background:rgba(255,255,255,.12);border-radius:12px;padding:10px 16px;text-align:center"><div style="font-size:20px;font-weight:900">${correct}</div><div style="font-size:11px;opacity:.7">Correct</div></div>
+        <div style="background:rgba(255,255,255,.12);border-radius:12px;padding:10px 16px;text-align:center"><div style="font-size:20px;font-weight:900">${wrong}</div><div style="font-size:11px;opacity:.7">Wrong</div></div>
+        <div style="background:rgba(255,255,255,.12);border-radius:12px;padding:10px 16px;text-align:center"><div style="font-size:20px;font-weight:900">${skipped}</div><div style="font-size:11px;opacity:.7">Skipped</div></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-bottom:16px">
+      <button onclick="retakeTest()" style="flex:1;background:linear-gradient(135deg,#f97316,#ea6a10);color:#fff;border:none;border-radius:12px;padding:13px;font-weight:800;font-family:'Nunito',sans-serif;cursor:pointer">🔄 Retake Test</button>
+      <button onclick="showScreen('tests')" style="flex:1;background:#f1f5f9;border:none;border-radius:12px;padding:13px;font-weight:800;font-family:'Nunito',sans-serif;cursor:pointer;color:#64748b">← All Tests</button>
+    </div>
+    <div style="font-family:'Baloo 2',sans-serif;font-size:17px;font-weight:700;color:#1e293b;margin-bottom:10px">📋 Question Analysis</div>
+    ${details.map((d,i)=>{
+      const userOptText = d.userAns ? d.q.dOpts[['A','B','C','D'].indexOf(d.userAns)]?.t : null;
+      const corrOptText = d.q.dOpts[['A','B','C','D'].indexOf(d.q.dCorrect)]?.t;
+      const color = !d.userAns?'#94a3b8':d.correct?'#16a34a':'#dc2626';
+      const icon = !d.userAns?'—':d.correct?'✅':'❌';
+      return `<div style="background:#fff;border-radius:14px;padding:14px;margin-bottom:10px;border-left:4px solid ${color};box-shadow:0 2px 8px rgba(30,58,95,.06)">
+        <div style="font-size:11px;font-weight:800;color:${color};margin-bottom:6px">Q${i+1} ${icon} ${!d.userAns?'SKIPPED':d.correct?'CORRECT':'WRONG'}</div>
+        <div style="font-size:14px;font-weight:700;color:#1e293b;margin-bottom:8px">${d.q.question}</div>
+        ${userOptText&&!d.correct?`<div style="font-size:12px;color:#dc2626;margin-bottom:3px">Your answer: ${userOptText}</div>`:''}
+        ${!d.correct?`<div style="font-size:12px;color:#16a34a;font-weight:700">✓ Correct: ${corrOptText}</div>`:''}
+        ${d.q.explanation?`<div style="font-size:12px;color:#64748b;margin-top:6px;padding:8px;background:#f8fafc;border-radius:8px">💡 ${d.q.explanation}</div>`:''}
+      </div>`;
+    }).join('')}`;
+
+  showScreen('myAnalytics');
+}
+
+function retakeTest() { loadTestTopic(S.testTopic.id); }
+
+async function renderAnalytics() {
+  const el = document.getElementById('analyticsContent');
+  if (!el) return;
+
+  // If showing last test result, show that directly
+  if (S.lastTestResult) { showTestAnalysis(S.lastTestResult); return; }
+
+  // Guest — prompt login
+  if (!S.user) {
+    el.innerHTML = `
+      <div style="text-align:center;padding:48px 20px">
+        <div style="font-size:48px;margin-bottom:12px">📊</div>
+        <div style="font-family:'Baloo 2',sans-serif;font-size:18px;font-weight:800;color:#1e293b;margin-bottom:8px">Progress Track Karo</div>
+        <div style="font-size:13px;color:#64748b;margin-bottom:20px">Login karo aur apne saare test results, scores aur progress dekho</div>
+        <button onclick="showLoginSheet('Progress Dekhne ke liye Login Karo 📊','Google se login karo — ek click mein aapka saara test history restore ho jayega!','📊')" style="background:linear-gradient(135deg,#1e3a5f,#2563eb);color:#fff;border:none;border-radius:14px;padding:14px 28px;font-size:14px;font-weight:800;cursor:pointer;font-family:'Nunito',sans-serif;display:inline-flex;align-items:center;gap:10px">
+          <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-3.59-13.46-8.83l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+          Google se Login Karo
+        </button>
+      </div>`;
+    return;
+  }
+  try {
+    const snap = await db.collection('testResults').where('userId','==',S.user.uid).orderBy('createdAt','desc').limit(20).get();
+    if (snap.empty) { el.innerHTML='<div style="text-align:center;padding:40px;color:#94a3b8">📊No tests taken yet<br><small>Take a test to see your progress</small></div>'; return; }
+    const results = snap.docs.map(d=>({id:d.id,...d.data()}));
+    const avg = Math.round(results.reduce((s,r)=>s+(r.score/r.total)*100,0)/results.length);
+    el.innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px">
+        <div style="background:#fff;border-radius:16px;padding:16px;text-align:center;box-shadow:0 2px 10px rgba(30,58,95,.06)">
+          <div style="font-family:'Baloo 2',sans-serif;font-size:28px;font-weight:800;color:#1e3a5f">${results.length}</div>
+          <div style="font-size:12px;color:#64748b;font-weight:700">Tests Taken</div>
+        </div>
+        <div style="background:#fff;border-radius:16px;padding:16px;text-align:center;box-shadow:0 2px 10px rgba(30,58,95,.06)">
+          <div style="font-family:'Baloo 2',sans-serif;font-size:28px;font-weight:800;color:#f97316">${avg}%</div>
+          <div style="font-size:12px;color:#64748b;font-weight:700">Avg Score</div>
+        </div>
+      </div>
+      <div style="font-family:'Baloo 2',sans-serif;font-size:17px;font-weight:700;color:#1e293b;margin-bottom:10px">Recent Tests</div>
+      ${results.map(r=>{const pct=Math.round((r.score/r.total)*100);return`<div style="background:#fff;border-radius:14px;padding:14px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 2px 8px rgba(30,58,95,.06)">
+        <div><div style="font-weight:800;font-size:14px;color:#1e293b">${r.topicName||'Test'}</div>
+        <div style="font-size:12px;color:#94a3b8;margin-top:3px">${r.correct||0}✅ ${r.wrong||0}❌ ${r.skipped||0}⏭</div></div>
+        <div style="text-align:right"><div style="font-family:'Baloo 2',sans-serif;font-size:22px;font-weight:800;color:${pct>=60?'#16a34a':'#dc2626'}">${pct}%</div><div style="font-size:11px;color:#94a3b8">${r.score}/${r.total}</div></div>
+      </div>`;}).join('')}`;
+  } catch(e) { el.innerHTML='<div style="text-align:center;padding:40px;color:#dc2626">Error loading analytics</div>'; }
+}
+
+// ══════════════════════════════════════
+// 👤 PROFILE & SOCIAL
+// ══════════════════════════════════════
+// updateProfileUI() is defined in the AUTH section above
+
+async function loadSocialLinks() {
+  try {
+    const snap = await db.collection('socialLinks').where('active','==',true).get();
+    S.socialLinks = snap.docs.map(d=>({id:d.id,...d.data()}));
+    const linksHTML = S.socialLinks.length
+      ? S.socialLinks.map(l=>`<a href="${l.url}" target="_blank" style="display:flex;align-items:center;gap:6px;background:#f1f5f9;border-radius:10px;padding:8px 12px;text-decoration:none;color:#1e293b;font-size:12px;font-weight:800">🔗 ${l.name}</a>`).join('')
+      : '<div style="color:#94a3b8;font-size:13px">No links added</div>';
+    const el1 = document.getElementById('socialLinks');
+    const el2 = document.getElementById('socialLinksGuest');
+    if (el1) el1.innerHTML = linksHTML;
+    if (el2) el2.innerHTML = linksHTML;
+  } catch(e) {}
+}
+
+// ══════════════════════════════════════
+// 🤖 AI CHATBOT (Groq)
+// ══════════════════════════════════════
+function toggleChat() {
+  const el = document.getElementById('chatOverlay');
+  if (el.classList.contains('hidden')) {
+    el.classList.remove('hidden');
+    // Always show greeting if first time or empty
+    if (S.chatMsgs.length === 0) {
+      S.chatMsgs = [{
+        role: 'assistant',
+        content: 'Namaste! 👋 Main SSC Mate AI Assistant hun.\n\nSSC exams ke baare mein kuch bhi poochh sakte hain — Vocabulary, GK, Math, English Grammar, ya koi bhi topic!'
+      }];
+    }
+    renderChat();
+    // Focus input after a slight delay (mobile keyboard)
+    setTimeout(() => {
+      const inp = document.getElementById('chatInput');
+      if (inp) inp.focus();
+    }, 300);
+  } else {
+    el.classList.add('hidden');
+  }
+}
+
+function renderChat() {
+  const el = document.getElementById('chatMessages');
+  if (!el) return;
+  el.innerHTML = S.chatMsgs.map(m => {
+    const isUser = m.role === 'user';
+    // Render newlines as <br>
+    const content = m.content.replace(/\n/g, '<br>');
+    return `
+      <div style="display:flex;${isUser ? 'justify-content:flex-end' : 'justify-content:flex-start;gap:8px'}">
+        ${!isUser ? '<div style="width:28px;height:28px;background:linear-gradient(135deg,#1e3a5f,#2563eb);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;margin-top:2px">🤖</div>' : ''}
+        <div style="max-width:80%;padding:10px 14px;font-size:13px;line-height:1.5;word-break:break-word;${isUser ? 'background:#1e3a5f;color:#fff;border-radius:18px 18px 4px 18px' : 'background:#fff;border:1px solid #e2e8f0;color:#1e293b;border-radius:18px 18px 18px 4px;box-shadow:0 1px 4px rgba(0,0,0,.06)'}">${content}</div>
+      </div>`;
+  }).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+async function sendChatMsg() {
+  const input = document.getElementById('chatInput');
+  const msg = input.value.trim();
+  if (!msg || S.chatLoading) return;
+  input.value = '';
+  S.chatMsgs.push({role:'user',content:msg});
+  S.chatLoading = true;
+  S.chatMsgs.push({role:'assistant', content:'<span style="display:inline-block;width:16px;height:16px;border:2px solid #e2e8f0;border-top-color:#1e3a5f;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle"></span> Thinking...'});
+  renderChat();
+
+  try {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':`Bearer ${GROQ_KEY}`},
+      body:JSON.stringify({
+        model:'llama3-8b-8192', max_tokens:400,
+        messages:[
+          {role:'system',content:'You are an expert SSC exam coach. Answer in Hindi or English based on the user\'s question. Be concise, helpful, and encouraging. Focus on SSC CGL, MTS, CHSL topics.'},
+          ...S.chatMsgs.filter(m=>m.role!=='assistant'||!m.content.includes('spinner'))
+        ]
+      })
+    });
+    const data = await res.json();
+    S.chatMsgs.pop();
+    S.chatMsgs.push({role:'assistant',content:data.choices?.[0]?.message?.content||'Sorry, try again later.'});
+  } catch(e) {
+    S.chatMsgs.pop();
+    S.chatMsgs.push({role:'assistant',content:'⚠️ Network error. Please try again.'});
+  }
+  S.chatLoading = false;
+  renderChat();
+}
+
+// ══════════════════════════════════════
+// 🔧 SHEET / MODAL
+// ══════════════════════════════════════
+function openSheet(html, tall=false) {
+  document.getElementById('sheetContent').innerHTML = html;
+  document.getElementById('sheetBox').style.maxHeight = tall ? '92vh' : '80vh';
+  document.getElementById('sheet').classList.remove('hidden');
+}
+function closeSheet() { document.getElementById('sheet').classList.add('hidden'); }
+
+// ══════════════════════════════════════
+// 🍞 TOAST
+// ══════════════════════════════════════
+let toastTimer;
+function toast(msg, type='') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.background = type==='error'?'#dc2626':type==='success'?'#16a34a':'#1e293b';
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>el.classList.remove('show'), 3000);
+}
+
+// ══════════════════════════════════════
+// 📱 WHATSAPP
+// ══════════════════════════════════════
+function openWhatsApp() { window.open(`https://wa.me/${WA_NUMBER}?text=Hello SSC Mate! I need help.`, '_blank'); }
+
+// ══════════════════════════════════════
+// 🛡️ PROTECTION
+// ══════════════════════════════════════
+document.addEventListener('contextmenu', e=>e.preventDefault());
+document.addEventListener('keydown', e=>{
+  if ((e.ctrlKey||e.metaKey) && ['p','s','u','a'].includes(e.key.toLowerCase())) e.preventDefault();
+});
+// Print protection
+window.addEventListener('beforeprint', e=>e.preventDefault());
+</script>
+</body>
+</html>
