@@ -270,12 +270,26 @@ body{font-family:"Nunito",sans-serif;background:#f1f5f9;margin:0}
 
     <!-- ─── VIDEOS ─── -->
     <div id="sec-videos" class="section">
-      <div class="card">
+      <div style="display:flex;gap:4px;background:#fff;border-radius:14px;padding:5px;box-shadow:var(--shadow);margin-bottom:16px">
+        <button onclick="videoSubTab('videos')" id="vsub-videos" class="btn btn-primary btn-sm" style="flex:1;justify-content:center;border-radius:9px">📹 Videos</button>
+        <button onclick="videoSubTab('playlists')" id="vsub-playlists" class="btn btn-gray btn-sm" style="flex:1;justify-content:center;border-radius:9px">📂 Playlists</button>
+      </div>
+      <div id="vsub-panel-videos" class="card">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
           <div style="font-weight:800;font-size:15px;color:#1e293b">All Videos</div>
           <button onclick="openModal('addVideo')" class="btn btn-accent">➕ Add Video</button>
         </div>
         <div id="videoTbl"></div>
+      </div>
+      <div id="vsub-panel-playlists" class="card" style="display:none">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+          <div style="font-weight:800;font-size:15px;color:#1e293b">📂 Playlists / Courses</div>
+          <button onclick="adminAddPlaylist()" class="btn btn-accent">➕ New Playlist</button>
+        </div>
+        <div style="font-size:13px;color:#64748b;margin-bottom:14px">
+          Playlists banao (e.g. "Hindi Grammar", "Maths", "GK") — phir video add karte waqt playlist assign karo.
+        </div>
+        <div id="playlistAdminList"></div>
       </div>
     </div>
 
@@ -658,14 +672,14 @@ async function loadVideos() {
   const rows = snap.docs.map(d=>({id:d.id,...d.data()}));
   document.getElementById('videoTbl').innerHTML = `
     <table class="tbl">
-      <thead><tr><th>Thumbnail</th><th>Title</th><th>Subject</th><th>Type</th><th>Status</th><th>Actions</th></tr></thead>
+      <thead><tr><th>Thumbnail</th><th>Title</th><th>Playlist</th><th>Type</th><th>Status</th><th>Actions</th></tr></thead>
       <tbody>${rows.length ? rows.map(v=>{
         const ytId = extractYtId(v.youtubeUrl||'');
         const thumb = v.thumbnail||(ytId?`https://img.youtube.com/vi/${ytId}/mqdefault.jpg`:'');
         return `<tr>
           <td>${thumb?`<img src="${thumb}" style="height:48px;width:80px;object-fit:cover;border-radius:8px">`:'—'}</td>
           <td><strong>${v.title}</strong><div style="font-size:11px;color:#94a3b8;max-width:200px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${v.description||''}</div></td>
-          <td>${v.subject||'—'}</td>
+          <td><strong>${v.playlist||'—'}</strong><div style='font-size:11px;color:#94a3b8'>${v.subject||''}</div></td>
           <td><span class="badge ${v.type==='live'?'badge-red':'badge-blue'}">${v.type==='live'?'🔴 Live':'Recorded'}</span></td>
           <td><span class="badge ${v.active!==false?'badge-green':'badge-red'}">${v.active!==false?'Active':'Hidden'}</span></td>
           <td><div style="display:flex;gap:6px">
@@ -715,7 +729,7 @@ function toggleLiveField() {
 }
 
 async function saveVideo(id) {
-  const d = { title:v('m-vTitle'), subject:v('m-vSubj'), type:v('m-vType'), youtubeUrl:v('m-vYt'), embedCode:v('m-vEmbed'), thumbnail:v('m-vThumb'), description:v('m-vDesc'), active:true };
+  const d = { title:v('m-vTitle'), subject:v('m-vSubj'), type:v('m-vType'), playlist:v('m-vPlaylist'), youtubeUrl:v('m-vYt'), embedCode:v('m-vEmbed'), thumbnail:v('m-vThumb'), description:v('m-vDesc'), active:true };
   if (!d.title||(d.type!=='live'&&!d.youtubeUrl)) { toast('Title and YouTube URL required', 'error'); return; }
   try {
     id ? await db.collection('videos').doc(id).update(d)
@@ -726,6 +740,88 @@ async function saveVideo(id) {
 
 async function editVideo(id) { const doc=await db.collection('videos').doc(id).get(); openModal_addVideo({id,...doc.data()}); openModalBox(); setTimeout(toggleLiveField,100); }
 async function deleteVideo(id) { if(!confirm('Delete?')) return; await db.collection('videos').doc(id).delete(); loadVideos(); toast('Deleted','success'); }
+
+// ════ VIDEO SUB-TABS ════
+function videoSubTab(tab) {
+  document.getElementById('vsub-panel-videos').style.display    = tab==='videos'    ? '' : 'none';
+  document.getElementById('vsub-panel-playlists').style.display = tab==='playlists' ? '' : 'none';
+  const vBtn = document.getElementById('vsub-videos');
+  const pBtn = document.getElementById('vsub-playlists');
+  if(vBtn) { vBtn.className = tab==='videos'    ? 'btn btn-primary btn-sm' : 'btn btn-gray btn-sm'; vBtn.style = 'flex:1;justify-content:center;border-radius:9px'; }
+  if(pBtn) { pBtn.className = tab==='playlists' ? 'btn btn-primary btn-sm' : 'btn btn-gray btn-sm'; pBtn.style = 'flex:1;justify-content:center;border-radius:9px'; }
+  if (tab==='playlists') loadAdminPlaylists();
+}
+
+// ════ PLAYLISTS ════
+let _playlists = [];
+
+async function loadAdminPlaylists() {
+  try {
+    const snap = await db.collection('playlists').orderBy('order','asc').get();
+    _playlists = snap.docs.map(d=>({id:d.id,...d.data()}));
+  } catch(e) {
+    const snap = await db.collection('playlists').get();
+    _playlists = snap.docs.map(d=>({id:d.id,...d.data()}));
+  }
+  const el = document.getElementById('playlistAdminList');
+  if (!el) return;
+  if (!_playlists.length) {
+    el.innerHTML = '<div style="text-align:center;padding:24px;color:#94a3b8"><div style="font-size:32px;margin-bottom:8px">📂</div>No playlists yet. Create your first!</div>';
+    return;
+  }
+  el.innerHTML = _playlists.map(pl=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:#f8fafc;border-radius:12px;margin-bottom:8px;border-left:4px solid #2563eb">
+      <div>
+        <div style="font-weight:800;font-size:14px;color:#1e293b">${pl.name}</div>
+        <div style="font-size:12px;color:#64748b;margin-top:2px">${pl.description||'No description'} • Order: ${pl.order||1}</div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button onclick="editPlaylist('${pl.id}')" class="btn btn-gray btn-sm">✏️</button>
+        <button onclick="deletePlaylist('${pl.id}')" class="btn btn-danger btn-sm">🗑️</button>
+      </div>
+    </div>`).join('');
+}
+
+function adminAddPlaylist() {
+  showModal(`<div class="modal-title">📂 Create New Playlist</div>
+    <div class="form-group"><label class="lbl">Playlist Name</label><input id="m-plName" class="inp" placeholder="e.g. SSC English Grammar, Mathematics, GK"></div>
+    <div class="form-group"><label class="lbl">Description (optional)</label><input id="m-plDesc" class="inp" placeholder="Short description..."></div>
+    <div class="form-group"><label class="lbl">Display Order</label><input id="m-plOrder" type="number" class="inp" value="1" min="1"></div>
+    <div style="display:flex;gap:10px">
+      <button onclick="closeModal()" class="btn btn-gray" style="flex:1;justify-content:center">Cancel</button>
+      <button onclick="savePlaylist('')" class="btn btn-accent" style="flex:2;justify-content:center">💾 Save Playlist</button>
+    </div>`);
+  openModalBox();
+}
+
+async function editPlaylist(id) {
+  const pl = _playlists.find(p=>p.id===id)||{};
+  showModal(`<div class="modal-title">✏️ Edit Playlist</div>
+    <div class="form-group"><label class="lbl">Playlist Name</label><input id="m-plName" class="inp" value="${pl.name||''}"></div>
+    <div class="form-group"><label class="lbl">Description</label><input id="m-plDesc" class="inp" value="${pl.description||''}"></div>
+    <div class="form-group"><label class="lbl">Display Order</label><input id="m-plOrder" type="number" class="inp" value="${pl.order||1}"></div>
+    <div style="display:flex;gap:10px">
+      <button onclick="closeModal()" class="btn btn-gray" style="flex:1;justify-content:center">Cancel</button>
+      <button onclick="savePlaylist('${id}')" class="btn btn-accent" style="flex:2;justify-content:center">💾 Update</button>
+    </div>`);
+  openModalBox();
+}
+
+async function savePlaylist(id) {
+  const name = document.getElementById('m-plName')?.value.trim();
+  if (!name) { toast('Playlist name required','error'); return; }
+  const d = { name, description:document.getElementById('m-plDesc')?.value.trim()||'', order:parseInt(document.getElementById('m-plOrder')?.value)||1 };
+  try {
+    id ? await db.collection('playlists').doc(id).update(d) : await db.collection('playlists').add({...d, createdAt:ts()});
+    closeModal(); loadAdminPlaylists(); toast('Playlist saved! ✅','success');
+  } catch(e) { toast('Error: '+e.message,'error'); }
+}
+
+async function deletePlaylist(id) {
+  if (!confirm('Delete playlist? Videos will remain but without playlist.')) return;
+  await db.collection('playlists').doc(id).delete();
+  loadAdminPlaylists(); toast('Playlist deleted','success');
+}
 
 // ══════════════════════════════════════
 // 📚 EBOOKS

@@ -38,6 +38,52 @@ input,textarea{-webkit-user-select:text!important;user-select:text!important}
 :root{--h:100dvh;--nav:65px}
 #root{height:var(--h);overflow:hidden;position:relative;max-width:480px;margin:0 auto;background:#f1f5f9}
 
+
+/* ─── VIDEO PLAYER OVERLAY ─── */
+#videoPlayerOverlay{position:fixed;inset:0;z-index:300;background:#000;display:flex;flex-direction:column;overflow:hidden}
+#videoFrameWrap{width:100%;background:#000;position:relative;flex-shrink:0}
+#videoPlayerFrame{width:100%;aspect-ratio:16/9;border:none;display:block}
+#videoInfoSection{flex:1;background:#f8fafc;overflow-y:auto;-webkit-overflow-scrolling:touch}
+#videoInfoSection::-webkit-scrollbar{display:none}
+
+/* Landscape fullscreen for video */
+#videoPlayerFrame.landscape-mode{
+  position:fixed !important;
+  transform:rotate(90deg) !important;
+  transform-origin:center !important;
+  z-index:9999 !important;
+  border:none !important;
+}
+#exitFSOverlay{position:fixed;bottom:20px;right:20px;z-index:10000;display:none}
+
+/* ─── TEST CONFIRM & REVIEW OVERLAY ─── */
+#testConfirmOverlay{position:fixed;inset:0;z-index:280;background:rgba(0,0,0,.6);display:flex;align-items:flex-end;justify-content:center}
+#testReviewOverlay{position:fixed;inset:0;z-index:280;background:#f1f5f9;display:flex;flex-direction:column;overflow:hidden}
+
+/* ─── AI VIDYA BUTTON ─── */
+@keyframes aiPulse{0%,100%{box-shadow:0 0 0 0 rgba(249,115,22,.6)}50%{box-shadow:0 0 0 10px rgba(249,115,22,0)}}
+@keyframes aiWave{0%,100%{transform:scaleY(1)}50%{transform:scaleY(1.6)}}
+#vidyaBtn{position:fixed;bottom:85px;left:16px;z-index:150;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px}
+#vidyaBtnInner{width:52px;height:52px;background:linear-gradient(135deg,#1e3a5f,#2563eb);border-radius:16px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 18px rgba(30,58,95,.4);animation:aiPulse 2.5s infinite}
+.ai-wave-bar{width:3px;height:12px;background:white;border-radius:2px;animation:aiWave 0.6s ease-in-out infinite}
+.ai-wave-bar:nth-child(2){animation-delay:.15s;height:16px}
+.ai-wave-bar:nth-child(3){animation-delay:.3s}
+.ai-wave-bar:nth-child(4){animation-delay:.45s;height:16px}
+.ai-wave-bar:nth-child(5){animation-delay:.6s}
+#vidyaLabel{font-size:9px;font-weight:800;color:#1e3a5f;background:white;padding:2px 7px;border-radius:10px;box-shadow:0 2px 6px rgba(0,0,0,.12);white-space:nowrap;letter-spacing:.3px}
+
+/* ─── PLAYLIST TABS ─── */
+.playlist-tab-row{display:flex;gap:6px;padding:10px 14px 4px;overflow-x:auto;-webkit-overflow-scrolling:touch;flex-shrink:0}
+.playlist-tab-row::-webkit-scrollbar{display:none}
+.pl-tab{padding:6px 14px;border-radius:20px;font-size:12px;font-weight:800;white-space:nowrap;cursor:pointer;border:2px solid transparent;transition:all .2s;font-family:"Nunito",sans-serif;flex-shrink:0}
+.pl-tab.active{background:#1e3a5f;color:white;border-color:#1e3a5f}
+.pl-tab:not(.active){background:white;color:#64748b;border-color:#e2e8f0}
+
+/* ─── Q REVIEW TILE ─── */
+.q-review-tile{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;cursor:pointer;transition:all .15s}
+.qrt-answered{background:#dcfce7;color:#16a34a;border:2px solid #16a34a}
+.qrt-skipped{background:#f1f5f9;color:#94a3b8;border:2px dashed #cbd5e1}
+
 /* ✅ FIX: .hidden works on ALL elements, not just .page */
 .hidden { display: none !important; }
 
@@ -206,11 +252,15 @@ input,textarea{-webkit-user-select:text!important;user-select:text!important}
 
     <!-- VIDEOS -->
     <div id="pageVideos" class="page hidden">
-      <div style="background:linear-gradient(135deg,#1e3a5f,#172e4d);padding:20px 16px 16px">
+      <div style="background:linear-gradient(135deg,#1e3a5f,#172e4d);padding:20px 16px 14px">
         <div style="font-family:'Baloo 2',sans-serif;font-size:22px;font-weight:800;color:#fff">📹 Video Classes</div>
         <div style="color:rgba(255,255,255,.65);font-size:13px;margin-top:2px">Live & Recorded Lectures</div>
       </div>
-      <div id="videoList" style="padding:14px;display:flex;flex-direction:column;gap:12px">
+      <!-- Playlist tabs row -->
+      <div class="playlist-tab-row" id="playlistTabRow">
+        <button class="pl-tab active" id="plt-all" onclick="filterVideosByPlaylist('all')">📹 All Videos</button>
+      </div>
+      <div id="videoList" style="padding:14px;display:flex;flex-direction:column;gap:12px;overflow-y:auto">
         <div class="shimmer-card" style="height:180px"></div>
         <div class="shimmer-card" style="height:180px"></div>
       </div>
@@ -406,8 +456,8 @@ input,textarea{-webkit-user-select:text!important;user-select:text!important}
     <button onclick="nextQ()" id="btnNextQ" style="flex:2;background:linear-gradient(135deg,#1e3a5f,#2563eb);color:#fff;border:none;border-radius:12px;padding:13px;font-size:14px;font-weight:800;font-family:'Nunito',sans-serif;cursor:pointer">
       Next →
     </button>
-    <button onclick="confirmSubmit()" id="btnSubmit" style="flex:2;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;border:none;border-radius:12px;padding:13px;font-size:14px;font-weight:800;font-family:'Nunito',sans-serif;cursor:pointer;display:none">
-      Submit ✓
+    <button onclick="showReviewOverlay()" id="btnSubmit" style="flex:2;background:linear-gradient(135deg,#f97316,#ea6a10);color:#fff;border:none;border-radius:12px;padding:13px;font-size:14px;font-weight:800;font-family:'Nunito',sans-serif;cursor:pointer;display:none">
+      📋 Review &amp; Submit
     </button>
   </div>
 </div>
@@ -421,8 +471,8 @@ input,textarea{-webkit-user-select:text!important;user-select:text!important}
           🤖
         </div>
         <div>
-          <div style="font-weight:900;color:#1e293b">SSC AI Assistant</div>
-          <div style="font-size:11px;color:#16a34a;font-weight:700">● Online</div>
+          <div style="font-weight:900;color:#1e293b">Vidya AI ✨</div>
+          <div style="font-size:11px;color:#16a34a;font-weight:700">● Online — SSC Expert</div>
         </div>
       </div>
       <button onclick="toggleChat()" style="background:#f1f5f9;border:none;width:32px;height:32px;border-radius:8px;cursor:pointer;color:#64748b;font-size:16px">✕</button>
@@ -467,6 +517,96 @@ input,textarea{-webkit-user-select:text!important;user-select:text!important}
 <!-- TOAST -->
 <div id="toast"></div>
 
+<!-- ═══════════ VIDEO PLAYER OVERLAY ═══════════ -->
+<div id="videoPlayerOverlay" class="hidden">
+  <!-- Top bar -->
+  <div id="videoTopBar" style="background:#0f172a;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;z-index:10">
+    <button onclick="closeVideoPlayer()" style="background:rgba(255,255,255,.1);border:none;color:#fff;width:34px;height:34px;border-radius:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <div id="videoTitleTop" style="color:#fff;font-weight:700;font-size:13px;flex:1;text-align:center;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;padding:0 8px"></div>
+    <button id="vLsBtn" onclick="toggleVideoLandscape()" style="background:rgba(255,255,255,.1);border:none;color:#fff;width:34px;height:34px;border-radius:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0" title="Full Screen">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+    </button>
+  </div>
+  <!-- Video frame -->
+  <div id="videoFrameWrap">
+    <iframe id="videoPlayerFrame" src="" allow="autoplay;encrypted-media;fullscreen" allowfullscreen></iframe>
+  </div>
+  <!-- Info section -->
+  <div id="videoInfoSection" style="flex:1;background:#fff;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px">
+    <div id="videoTitleFull" style="font-family:'Baloo 2',sans-serif;font-size:18px;font-weight:800;color:#1e293b;margin-bottom:6px"></div>
+    <div id="videoSubjectTag" style="display:inline-block;background:#eff6ff;color:#2563eb;font-size:12px;font-weight:800;padding:3px 10px;border-radius:20px;margin-bottom:10px"></div>
+    <div id="videoDescFull" style="font-size:13px;color:#64748b;line-height:1.7"></div>
+  </div>
+  <!-- Exit fullscreen overlay button (shown only in landscape mode) -->
+  <div id="exitFSOverlay">
+    <button onclick="toggleVideoLandscape()" style="background:rgba(0,0,0,.7);border:none;color:white;border-radius:12px;padding:10px 16px;cursor:pointer;font-size:13px;font-weight:800;display:flex;align-items:center;gap:6px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="10" y1="14" x2="21" y2="3"/><line x1="3" y1="21" x2="14" y2="10"/></svg>
+      Exit Fullscreen
+    </button>
+  </div>
+</div>
+
+<!-- ═══════════ TEST CONFIRM OVERLAY ═══════════ -->
+<div id="testConfirmOverlay" class="hidden" onclick="if(event.target===this)this.classList.add('hidden')">
+  <div style="background:#fff;border-radius:24px 24px 0 0;width:100%;max-width:480px;padding:24px 20px 36px;animation:slideUp .3s ease">
+    <div style="width:40px;height:4px;background:#e2e8f0;border-radius:2px;margin:0 auto 20px"></div>
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="font-size:44px;margin-bottom:10px">📝</div>
+      <div id="tcTitle" style="font-family:'Baloo 2',sans-serif;font-size:22px;font-weight:800;color:#1e293b;margin-bottom:6px"></div>
+      <div id="tcSubtitle" style="font-size:13px;color:#64748b;line-height:1.6"></div>
+    </div>
+    <div id="tcStats" style="display:flex;gap:10px;margin-bottom:20px;justify-content:center"></div>
+    <button onclick="proceedStartTest()" style="width:100%;background:linear-gradient(135deg,#1e3a5f,#2563eb);color:#fff;border:none;border-radius:14px;padding:15px;font-size:15px;font-weight:800;font-family:'Nunito',sans-serif;cursor:pointer;margin-bottom:10px">
+      🚀 Start Test Now
+    </button>
+    <button onclick="document.getElementById('testConfirmOverlay').classList.add('hidden')" style="width:100%;background:#f1f5f9;border:none;border-radius:14px;padding:13px;font-size:14px;font-weight:700;font-family:'Nunito',sans-serif;cursor:pointer;color:#64748b">
+      Not Ready — Go Back
+    </button>
+  </div>
+</div>
+
+<!-- ═══════════ TEST REVIEW OVERLAY ═══════════ -->
+<div id="testReviewOverlay" class="hidden">
+  <div style="background:#1e3a5f;padding:14px 16px;flex-shrink:0">
+    <div style="font-family:'Baloo 2',sans-serif;font-size:18px;font-weight:800;color:#fff">📋 Review Answers</div>
+    <div id="reviewStats" style="color:rgba(255,255,255,.7);font-size:13px;margin-top:3px"></div>
+  </div>
+  <div style="flex:1;overflow-y:auto;padding:16px;min-height:0">
+    <div style="font-size:13px;color:#64748b;font-weight:600;margin-bottom:12px">Tap any question to revisit it:</div>
+    <div id="reviewGrid" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px"></div>
+    <div style="background:#f8fafc;border-radius:12px;padding:14px;margin-bottom:16px">
+      <div style="display:flex;gap:12px;font-size:12px;font-weight:700">
+        <span style="display:flex;align-items:center;gap:5px"><span style="width:14px;height:14px;background:#dcfce7;border:2px solid #16a34a;border-radius:4px;display:inline-block"></span>Answered</span>
+        <span style="display:flex;align-items:center;gap:5px"><span style="width:14px;height:14px;background:#f1f5f9;border:2px dashed #cbd5e1;border-radius:4px;display:inline-block"></span>Skipped</span>
+      </div>
+    </div>
+  </div>
+  <div style="padding:14px 16px;background:#fff;border-top:1px solid #e2e8f0;display:flex;gap:10px;flex-shrink:0;padding-bottom:calc(14px + env(safe-area-inset-bottom))">
+    <button onclick="closeReviewAndContinue()" style="flex:1;background:#f1f5f9;border:none;border-radius:12px;padding:13px;font-size:14px;font-weight:800;font-family:'Nunito',sans-serif;cursor:pointer;color:#64748b">
+      ← Continue Test
+    </button>
+    <button onclick="finalSubmitTest()" style="flex:2;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;border:none;border-radius:12px;padding:13px;font-size:14px;font-weight:800;font-family:'Nunito',sans-serif;cursor:pointer">
+      ✓ Submit Test
+    </button>
+  </div>
+</div>
+
+<!-- ═══════════ VIDYA AI BUTTON (replaces WhatsApp-side chat) ═══════════ -->
+<div id="vidyaBtn" onclick="toggleChat()">
+  <div id="vidyaBtnInner">
+    <div style="display:flex;align-items:flex-end;gap:2px;height:20px">
+      <div class="ai-wave-bar"></div>
+      <div class="ai-wave-bar"></div>
+      <div class="ai-wave-bar"></div>
+      <div class="ai-wave-bar"></div>
+      <div class="ai-wave-bar"></div>
+    </div>
+  </div>
+  <div id="vidyaLabel">Vidya AI</div>
+</div>
+
 <!-- WhatsApp FAB -->
 <div id="waFab" onclick="openWhatsApp()" style="position:fixed;bottom:85px;right:16px;width:52px;height:52px;background:#25d366;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 6px 20px rgba(37,211,102,.4);z-index:150;transition:transform .2s" onmousedown="this.style.transform='scale(.9)'" onmouseup="this.style.transform=''">
   <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
@@ -488,8 +628,8 @@ const FB_CONFIG = {
   messagingSenderId: "274162437758",
   appId: "1:274162437758:web:e153b0eba458598533522f"
 };
-const RZP_KEY   = "xxxxxxxxxx"; // Razorpay Key ID
-const GROQ_KEY  = "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";      // Groq API Key
+const RZP_KEY   = "rzp_test_XXXXXXXXXXXXXXXX"; // Razorpay Key ID
+const GROQ_KEY  = "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";
 const WA_NUMBER = "917759843674";              // WhatsApp (91 + 10 digits, no +)
 
 // ══════════════════════════════════════
@@ -515,7 +655,7 @@ const S = {
   profile: null,
   screen: 'home',
   history: [],
-  banners: [], videos: [], ebooks: [], allEbooks: [],
+  banners: [], videos: [], ebooks: [], allEbooks: [], playlists: [],
   ebookFilter: 'all', topics: [], socialLinks: [], purchases: [],
   payingEbook: null, couponApplied: null, payFinal: 0,
   testTopic: null, testQs: [], testIdx: 0, testAnswers: {},
@@ -717,6 +857,16 @@ function startContentListeners() {
       if (S.screen==='home') renderHomeEbooks();
     });
   });
+  // Playlists (for videos)
+  const uP = db.collection('playlists').orderBy('order','asc').onSnapshot(s => {
+    S.playlists = s.docs.map(d=>({id:d.id,...d.data()}));
+    renderPlaylistTabs();
+  }, () => {
+    db.collection('playlists').onSnapshot(s => {
+      S.playlists = s.docs.map(d=>({id:d.id,...d.data()}));
+    });
+  });
+
   // Tests
   const u4 = db.collection('testTopics').orderBy('createdAt','asc').onSnapshot(s => {
     S.topics = s.docs.map(d=>({id:d.id,...d.data()}));
@@ -819,31 +969,35 @@ function goBanner(i) {
 // 📹 VIDEOS
 // ══════════════════════════════════════
 function videoCard(v) {
-  const ytId = extractYtId(v.youtubeUrl||v.embedCode||'');
+  const ytId  = extractYtId(v.youtubeUrl || v.youtubeId || v.embedCode || '');
   const thumb = v.thumbnail || (ytId ? `https://img.youtube.com/vi/${ytId}/hqdefault.jpg` : '');
+  const isLive = v.type === 'live';
   return `
     <div onclick="openVideoPlayer('${v.id}')" style="background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 2px 12px rgba(30,58,95,.08);cursor:pointer;transition:transform .15s" onmousedown="this.style.transform='scale(.98)'" onmouseup="this.style.transform=''">
-      <div style="position:relative;height:175px;background:#1e3a5f;overflow:hidden">
-        ${thumb ? `<img src="${thumb}" style="width:100%;height:100%;object-fit:cover">` : '<div style="height:100%;display:flex;align-items:center;justify-content:center;font-size:40px">📹</div>'}
-        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.25)">
-          <div style="width:52px;height:52px;background:#f97316;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(249,115,22,.5)">
-            ▶
-          </div>
+      <div style="position:relative;height:175px;background:#0f172a;overflow:hidden">
+        ${thumb ? `<img src="${thumb}" alt="${v.title}" style="width:100%;height:100%;object-fit:cover">` :
+          '<div style="height:100%;display:flex;align-items:center;justify-content:center;font-size:40px;color:rgba(255,255,255,.2)">📹</div>'}
+        ${isLive ? `<div style="position:absolute;top:10px;left:10px;background:#ef4444;color:#fff;font-size:11px;font-weight:800;padding:4px 10px;border-radius:6px;display:flex;align-items:center;gap:5px"><span style="width:7px;height:7px;background:#fff;border-radius:50%;display:inline-block"></span>LIVE</div>` : ''}
+        <div style="position:absolute;bottom:8px;right:8px;width:32px;height:32px;background:rgba(249,115,22,.92);border-radius:8px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.3)">
+          <svg width="12" height="14" viewBox="0 0 12 14" fill="white"><polygon points="0,0 12,7 0,14"/></svg>
         </div>
-        ${v.type==='live' ? '<div style="position:absolute;top:10px;left:10px;background:#ef4444;color:#fff;font-size:11px;font-weight:800;padding:3px 8px;border-radius:6px;display:flex;align-items:center;gap:5px"><div class="live-dot"></div>LIVE</div>' : ''}
+        ${v.playlist ? `<div style="position:absolute;bottom:8px;left:8px;background:rgba(0,0,0,.65);color:#fff;font-size:10px;font-weight:800;padding:3px 8px;border-radius:6px">${v.playlist}</div>` : ''}
       </div>
       <div style="padding:12px 14px">
         <div style="font-weight:800;font-size:14px;color:#1e293b;line-height:1.3;margin-bottom:4px">${v.title}</div>
         <div style="font-size:12px;color:#94a3b8;display:flex;align-items:center;gap:8px">
-          <span>⊟${v.subject||'General'}</span>
+          <span>${v.playlist || v.subject || 'General'}</span>
           <span>•</span>
-          <span>${v.type==='live'?'🔴 Live Class':'📹 Recorded'}</span>
+          <span>${isLive ? '🔴 Live' : '📹 Recorded'}</span>
         </div>
       </div>
     </div>`;
 }
 
-function renderVideos() { document.getElementById('videoList').innerHTML = S.videos.length ? S.videos.map(videoCard).join('') : '<div style="text-align:center;padding:40px;color:#94a3b8">📹No videos yet</div>'; }
+function renderVideos() {
+  renderPlaylistTabs();
+  filterVideosByPlaylist(_currentPlaylist);
+}
 
 function renderHomeVideos() {
   const el = document.getElementById('homeVideoList');
@@ -855,7 +1009,7 @@ function renderHomeVideos() {
     return `<div onclick="openVideoPlayer('${v.id}')" style="display:flex;gap:12px;background:#fff;border-radius:14px;padding:12px;margin-bottom:10px;cursor:pointer;box-shadow:0 2px 8px rgba(30,58,95,.07)">
       <div style="width:90px;height:64px;border-radius:10px;overflow:hidden;background:#1e3a5f;flex-shrink:0;position:relative">
         ${thumb?`<img src="${thumb}" style="width:100%;height:100%;object-fit:cover">`:'<div style="height:100%;display:flex;align-items:center;justify-content:center;font-size:22px">📹</div>'}
-        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center"><div style="width:26px;height:26px;background:#f97316;border-radius:50%;display:flex;align-items:center;justify-content:center">▶</div></div>
+
       </div>
       <div style="flex:1;overflow:hidden">
         <div style="font-weight:800;font-size:13px;color:#1e293b;line-height:1.3">${v.title}</div>
@@ -865,25 +1019,128 @@ function renderHomeVideos() {
   }).join('') : '<div style="color:#94a3b8;font-size:13px;padding:8px">No videos yet.</div>';
 }
 
+// ══════════════════════════════════════
+// 📹 VIDEO PLAYER — Full Screen Overlay
+// ══════════════════════════════════════
+let _videoLandscape = false;
+
 async function openVideoPlayer(id) {
-  const v = S.videos.find(x=>x.id===id);
+  const v = S.videos.find(x => x.id === id);
   if (!v) return;
 
-  let embedHtml = '';
-  const ytId = extractYtId(v.youtubeUrl||v.youtubeId||'');
-  if (v.type==='live' && v.embedCode) {
-    embedHtml = v.embedCode;
+  const ytId = extractYtId(v.youtubeUrl || v.youtubeId || '');
+  let src = '';
+  if (v.type === 'live' && v.embedCode) {
+    // Live stream — inject embed code directly
+    document.getElementById('videoFrameWrap').innerHTML = v.embedCode;
   } else if (ytId) {
-    embedHtml = `<iframe src="https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1" allow="autoplay;encrypted-media" allowfullscreen style="width:100%;aspect-ratio:16/9;border:none"></iframe>`;
+    src = `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1&playsinline=1`;
+    const frame = document.getElementById('videoPlayerFrame');
+    frame.src = src;
+    document.getElementById('videoFrameWrap').innerHTML = '';
+    document.getElementById('videoFrameWrap').appendChild(frame);
   } else {
     toast('Video URL not available', 'error'); return;
   }
 
-  openSheet(`
-    <div style="font-weight:900;font-size:16px;color:#1e293b;margin-bottom:12px">${v.title}</div>
-    ${embedHtml}
-    ${v.description?`<div style="font-size:13px;color:#64748b;margin-top:12px;line-height:1.6">${v.description}</div>`:''}
-  `, true);
+  // Fill info section
+  document.getElementById('videoTitleTop').textContent  = v.title;
+  document.getElementById('videoTitleFull').textContent = v.title;
+  document.getElementById('videoSubjectTag').textContent = v.playlist || v.subject || 'General';
+  document.getElementById('videoDescFull').textContent  = v.description || '';
+
+  // Reset landscape state
+  _videoLandscape = false;
+  const frame = document.getElementById('videoPlayerFrame');
+  frame.classList.remove('landscape-mode');
+  frame.style.cssText = 'width:100%;aspect-ratio:16/9;border:none;display:block';
+  document.getElementById('exitFSOverlay').style.display = 'none';
+  document.getElementById('videoTopBar').style.display   = 'flex';
+  document.getElementById('videoInfoSection').style.display = '';
+
+  document.getElementById('videoPlayerOverlay').classList.remove('hidden');
+  // Hide bottom nav while player is open
+  const nav = document.getElementById('bottomNav');
+  if (nav) nav.style.display = 'none';
+}
+
+function closeVideoPlayer() {
+  const frame = document.getElementById('videoPlayerFrame');
+  frame.src = '';
+  // Exit landscape if active
+  if (_videoLandscape) toggleVideoLandscape();
+  document.getElementById('videoPlayerOverlay').classList.add('hidden');
+  const nav = document.getElementById('bottomNav');
+  if (nav) nav.style.display = 'flex';
+}
+
+function toggleVideoLandscape() {
+  const frame      = document.getElementById('videoPlayerFrame');
+  const topBar     = document.getElementById('videoTopBar');
+  const infoSec    = document.getElementById('videoInfoSection');
+  const exitBtn    = document.getElementById('exitFSOverlay');
+  const lsBtn      = document.getElementById('vLsBtn');
+  _videoLandscape  = !_videoLandscape;
+
+  if (_videoLandscape) {
+    // ── ENTER fake-landscape fullscreen ──
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    frame.style.cssText = `
+      position:fixed;
+      top:${(vh - vw) / 2}px;
+      left:${(vw - vh) / 2}px;
+      width:${vh}px;
+      height:${vw}px;
+      transform:rotate(90deg);
+      transform-origin:center;
+      z-index:9999;
+      border:none;
+      background:#000;
+    `;
+    topBar.style.display  = 'none';
+    infoSec.style.display = 'none';
+    exitBtn.style.display = 'flex';
+    lsBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="10" y1="14" x2="21" y2="3"/><line x1="3" y1="21" x2="14" y2="10"/></svg>';
+  } else {
+    // ── EXIT fullscreen ──
+    frame.style.cssText   = 'width:100%;aspect-ratio:16/9;border:none;display:block';
+    topBar.style.display  = 'flex';
+    infoSec.style.display = '';
+    exitBtn.style.display = 'none';
+    lsBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>';
+  }
+}
+
+// ── PLAYLISTS ──
+let _currentPlaylist = 'all';
+
+function renderPlaylistTabs() {
+  const row = document.getElementById('playlistTabRow');
+  if (!row) return;
+  // Get unique playlists from videos
+  const playlists = [...new Set(S.videos.map(v => v.playlist).filter(Boolean))];
+  let tabs = '<button class="pl-tab ' + (_currentPlaylist==='all'?'active':'') + '" id="plt-all" onclick="filterVideosByPlaylist(\'all\')">📹 All Videos</button>';
+  tabs += playlists.map(pl =>
+    `<button class="pl-tab ${_currentPlaylist===pl?'active':''}" onclick="filterVideosByPlaylist('${pl.replace(/'/g,'\\\'')}')">${pl}</button>`
+  ).join('');
+  row.innerHTML = tabs;
+}
+
+function filterVideosByPlaylist(pl) {
+  _currentPlaylist = pl;
+  renderPlaylistTabs();
+  const filtered = pl === 'all' ? S.videos : S.videos.filter(v => v.playlist === pl);
+  const el = document.getElementById('videoList');
+  if (!el) return;
+  el.innerHTML = filtered.length
+    ? filtered.map(videoCard).join('')
+    : '<div style="text-align:center;padding:40px;color:#94a3b8">No videos in this playlist yet</div>';
+}
+
+function renderVideos() {
+  renderPlaylistTabs();
+  filterVideosByPlaylist(_currentPlaylist);
 }
 
 function extractYtId(url) {
@@ -1142,18 +1399,45 @@ function renderTopics() {
 }
 
 async function loadTestTopic(tid) {
-  const topic = S.topics.find(t=>t.id===tid);
+  const topic = S.topics.find(t => t.id === tid);
   if (!topic) return;
+
+  // ── Show confirmation overlay first ──
+  document.getElementById('tcTitle').textContent = topic.name;
+  document.getElementById('tcSubtitle').textContent =
+    `${topic.description || 'Topic-wise practice test'} — Questions aur options dono shuffle honge!`;
+
+  document.getElementById('tcStats').innerHTML = [
+    {icon:'📝', val: topic.questionCount || '?', lbl:'Questions'},
+    {icon:'⏱️', val: (topic.duration||30)+'m', lbl:'Duration'},
+    {icon:'🔀', val: 'Yes', lbl:'Randomized'},
+  ].map(s => `<div style="background:#f8fafc;border-radius:12px;padding:12px 16px;text-align:center;min-width:70px">
+    <div style="font-size:20px">${s.icon}</div>
+    <div style="font-family:'Baloo 2',sans-serif;font-size:16px;font-weight:800;color:#1e293b">${s.val}</div>
+    <div style="font-size:11px;color:#64748b;font-weight:700">${s.lbl}</div>
+  </div>`).join('');
+
+  // Store topic for proceedStartTest
+  S._pendingTopic = topic;
+  document.getElementById('testConfirmOverlay').classList.remove('hidden');
+}
+
+// Called when user clicks "Start Test Now"
+async function proceedStartTest() {
+  document.getElementById('testConfirmOverlay').classList.add('hidden');
+  const topic = S._pendingTopic;
+  if (!topic) return;
+
   toast('Loading questions...', '');
   try {
-    const snap = await db.collection('testTopics').doc(tid).collection('questions').get();
+    const snap = await db.collection('testTopics').doc(topic.id).collection('questions').get();
     if (snap.empty) { toast('No questions in this test yet', 'error'); return; }
-    const rawQs = snap.docs.map(d=>({id:d.id,...d.data()}));
-    S.testTopic = topic;
-    S.testQs = shuffle(rawQs).map(prepQ);
-    S.testIdx = 0;
+    const rawQs = snap.docs.map(d => ({id:d.id, ...d.data()}));
+    S.testTopic   = topic;
+    S.testQs      = shuffle(rawQs).map(prepQ);
+    S.testIdx     = 0;
     S.testAnswers = {};
-    S.testSecs = (topic.duration||30)*60;
+    S.testSecs    = (topic.duration || 30) * 60;
     startTestUI();
   } catch(e) { toast('Error loading test', 'error'); }
 }
@@ -1214,9 +1498,94 @@ function renderCurrentQ() {
   document.getElementById('btnSubmit').style.display  = S.testIdx === total - 1  ? '' : 'none';
 }
 
-function selectAns(i) { S.testAnswers[S.testIdx] = ['A','B','C','D'][i]; renderCurrentQ(); }
-function prevQ() { if (S.testIdx>0) { S.testIdx--; renderCurrentQ(); } }
-function nextQ() { if (S.testIdx<S.testQs.length-1) { S.testIdx++; renderCurrentQ(); } }
+function selectAns(i) {
+  const letter = ['A','B','C','D'][i];
+  // ✅ Toggle: click same option again → unselect
+  if (S.testAnswers[S.testIdx] === letter) {
+    delete S.testAnswers[S.testIdx];
+  } else {
+    S.testAnswers[S.testIdx] = letter;
+  }
+  renderCurrentQ();
+}
+
+function prevQ() { if (S.testIdx > 0) { S.testIdx--; renderCurrentQ(); } }
+
+function nextQ() {
+  if (S.testIdx < S.testQs.length - 1) {
+    S.testIdx++;
+    renderCurrentQ();
+  } else {
+    // ── Last question: show Review overlay instead of direct submit ──
+    showReviewOverlay();
+  }
+}
+
+function showReviewOverlay() {
+  const total    = S.testQs.length;
+  const answered = Object.keys(S.testAnswers).length;
+  const skipped  = total - answered;
+
+  document.getElementById('reviewStats').textContent =
+    `${answered} Answered ✅  •  ${skipped} Skipped ⏭  •  ${total} Total`;
+
+  // Build grid of question tiles
+  let grid = '';
+  for (let i = 0; i < total; i++) {
+    const ans     = S.testAnswers[i];
+    const tileClass = ans ? 'qrt-answered' : 'qrt-skipped';
+    grid += `<div class="q-review-tile ${tileClass}" onclick="goToQuestion(${i})" title="${ans?'Answered':'Skipped'}">${i+1}</div>`;
+  }
+  document.getElementById('reviewGrid').innerHTML = grid;
+  document.getElementById('testReviewOverlay').classList.remove('hidden');
+}
+
+function goToQuestion(idx) {
+  document.getElementById('testReviewOverlay').classList.add('hidden');
+  S.testIdx = idx;
+  renderCurrentQ();
+}
+
+function closeReviewAndContinue() {
+  document.getElementById('testReviewOverlay').classList.add('hidden');
+}
+
+function confirmSubmit() {
+  // This is now called from submit button — show review first
+  showReviewOverlay();
+}
+
+async function finalSubmitTest() {
+  document.getElementById('testReviewOverlay').classList.add('hidden');
+  clearInterval(S.testTimer);
+  let correct = 0, wrong = 0, skipped = 0;
+  const details = S.testQs.map((q, i) => {
+    const ans  = S.testAnswers[i];
+    if (!ans) { skipped++; return {q, userAns:null, correct:false}; }
+    const isOk = ans === q.dCorrect;
+    isOk ? correct++ : wrong++;
+    return {q, userAns:ans, correct:isOk};
+  });
+
+  const score   = correct;
+  const total   = S.testQs.length;
+  S.lastTestResult = {score, total, correct, wrong, skipped, details, topic:S.testTopic.name};
+
+  if (S.user) {
+    try {
+      await db.collection('testResults').add({
+        userId:S.user.uid, topicId:S.testTopic.id, topicName:S.testTopic.name,
+        score, total, correct, wrong, skipped,
+        createdAt:firebase.firestore.FieldValue.serverTimestamp()
+      });
+    } catch(e) {}
+  }
+
+  document.getElementById('testOverlay').classList.add('hidden');
+  const nav = document.getElementById('bottomNav');
+  if (nav) nav.style.display = 'flex';
+  showTestAnalysis(S.lastTestResult);
+}
 
 function confirmSubmit() {
   const unanswered = S.testQs.length - Object.keys(S.testAnswers).length;
@@ -1375,25 +1744,47 @@ async function loadSocialLinks() {
 }
 
 // ══════════════════════════════════════
-// 🤖 AI CHATBOT (Groq)
+// 🤖 VIDYA AI CHATBOT (Groq)
 // ══════════════════════════════════════
+const GROQ_MODEL  = "llama-3.3-70b-versatile";
+const VIDYA_SYSTEM = `You are "Vidya AI" — SSC Mate app ka intelligent exam preparation assistant.
+
+SSC Mate App ke baare mein:
+- SSC Mate ek comprehensive SSC exam preparation platform hai
+- Features: Video Classes (subject-wise playlists), E-Books & PDFs (free + paid), Test Series (topic-wise practice), Vidya AI (yeh main hun!)
+- Subjects covered: English Vocabulary, Grammar, Mathematics, Reasoning, General Knowledge, Current Affairs
+- Exams: SSC CGL, SSC CHSL, SSC MTS, SSC GD, SSC CPO, SSC Stenographer
+
+Mera kaam:
+1. SSC exam preparation mein expert guidance dena
+2. Vocabulary synonyms/antonyms, idioms, one-word substitution explain karna
+3. Maths shortcuts aur tricks batana (percentage, ratio, SI/CI, geometry)
+4. Reasoning patterns samjhana
+5. GK facts aur current affairs help karna
+6. Study strategy aur time management tips dena
+7. Practice questions solve karna aur explain karna
+8. Motivation aur confidence boost karna
+
+Style:
+- Short aur focused answers (2-4 lines normally, detailed jab zarori ho)
+- Hinglish mein reply karo (Hindi + English mix — jaise user likhta hai)
+- Positive aur encouraging tone hamesha
+- Important words **bold** karo
+- Agar koi non-SSC topic aaye, politely redirect karo SSC prep ki taraf`;
+
+let _chatHistory = [];
+
 function toggleChat() {
   const el = document.getElementById('chatOverlay');
   if (el.classList.contains('hidden')) {
     el.classList.remove('hidden');
-    // Always show greeting if first time or empty
     if (S.chatMsgs.length === 0) {
-      S.chatMsgs = [{
-        role: 'assistant',
-        content: 'Namaste! 👋 Main SSC Mate AI Assistant hun.\n\nSSC exams ke baare mein kuch bhi poochh sakte hain — Vocabulary, GK, Math, English Grammar, ya koi bhi topic!'
+      S.chatMsgs = [{role:'assistant',
+        content:'Namaste! 🙏 Main **Vidya AI** hun — aapka personal SSC exam coach!\n\nMujhse poochho:\n• 📖 Vocabulary & Grammar\n• 🔢 Maths shortcuts\n• 🧠 Reasoning tricks\n• 🌍 GK & Current Affairs\n• 📝 Study strategy\n\nKya poochhna hai? 😊'
       }];
     }
     renderChat();
-    // Focus input after a slight delay (mobile keyboard)
-    setTimeout(() => {
-      const inp = document.getElementById('chatInput');
-      if (inp) inp.focus();
-    }, 300);
+    setTimeout(() => { const inp = document.getElementById('chatInput'); if (inp) inp.focus(); }, 300);
   } else {
     el.classList.add('hidden');
   }
@@ -1404,13 +1795,13 @@ function renderChat() {
   if (!el) return;
   el.innerHTML = S.chatMsgs.map(m => {
     const isUser = m.role === 'user';
-    // Render newlines as <br>
-    const content = m.content.replace(/\n/g, '<br>');
-    return `
-      <div style="display:flex;${isUser ? 'justify-content:flex-end' : 'justify-content:flex-start;gap:8px'}">
-        ${!isUser ? '<div style="width:28px;height:28px;background:linear-gradient(135deg,#1e3a5f,#2563eb);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;margin-top:2px">🤖</div>' : ''}
-        <div style="max-width:80%;padding:10px 14px;font-size:13px;line-height:1.5;word-break:break-word;${isUser ? 'background:#1e3a5f;color:#fff;border-radius:18px 18px 4px 18px' : 'background:#fff;border:1px solid #e2e8f0;color:#1e293b;border-radius:18px 18px 18px 4px;box-shadow:0 1px 4px rgba(0,0,0,.06)'}">${content}</div>
-      </div>`;
+    let content = m.content
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\n/g, '<br>');
+    return `<div style="display:flex;${isUser?'justify-content:flex-end':'justify-content:flex-start;gap:8px'}">
+      ${!isUser?'<div style="width:28px;height:28px;background:linear-gradient(135deg,#1e3a5f,#2563eb);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;margin-top:2px">✨</div>':''}
+      <div style="max-width:82%;padding:10px 14px;font-size:13px;line-height:1.6;word-break:break-word;${isUser?'background:#1e3a5f;color:#fff;border-radius:18px 18px 4px 18px':'background:#fff;border:1px solid #e2e8f0;color:#1e293b;border-radius:18px 18px 18px 4px;box-shadow:0 1px 4px rgba(0,0,0,.06)'}">${content}</div>
+    </div>`;
   }).join('');
   el.scrollTop = el.scrollHeight;
 }
@@ -1420,29 +1811,37 @@ async function sendChatMsg() {
   const msg = input.value.trim();
   if (!msg || S.chatLoading) return;
   input.value = '';
-  S.chatMsgs.push({role:'user',content:msg});
+  S.chatMsgs.push({role:'user', content:msg});
+  _chatHistory.push({role:'user', content:msg});
   S.chatLoading = true;
-  S.chatMsgs.push({role:'assistant', content:'<span style="display:inline-block;width:16px;height:16px;border:2px solid #e2e8f0;border-top-color:#1e3a5f;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle"></span> Thinking...'});
+  S.chatMsgs.push({role:'assistant', content:'<span style="display:inline-flex;align-items:center;gap:6px"><span style="display:inline-block;width:14px;height:14px;border:2px solid #e2e8f0;border-top-color:#2563eb;border-radius:50%;animation:spin .7s linear infinite"></span>Thinking...</span>'});
   renderChat();
-
   try {
     const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':`Bearer ${GROQ_KEY}`},
       body:JSON.stringify({
-        model:'llama3-8b-8192', max_tokens:400,
+        model: GROQ_MODEL,
+        max_tokens: 450,
+        temperature: 0.7,
         messages:[
-          {role:'system',content:'You are an expert SSC exam coach. Answer in Hindi or English based on the user\'s question. Be concise, helpful, and encouraging. Focus on SSC CGL, MTS, CHSL topics.'},
-          ...S.chatMsgs.filter(m=>m.role!=='assistant'||!m.content.includes('spinner'))
+          {role:'system', content: VIDYA_SYSTEM},
+          ..._chatHistory.slice(-10)
         ]
       })
     });
+    if (!res.ok) throw new Error('API_' + res.status);
     const data = await res.json();
+    const reply = data.choices?.[0]?.message?.content?.trim() || 'Kuchh problem hui. Dobara try karo!';
     S.chatMsgs.pop();
-    S.chatMsgs.push({role:'assistant',content:data.choices?.[0]?.message?.content||'Sorry, try again later.'});
+    S.chatMsgs.push({role:'assistant', content:reply});
+    _chatHistory.push({role:'assistant', content:reply});
   } catch(e) {
     S.chatMsgs.pop();
-    S.chatMsgs.push({role:'assistant',content:'⚠️ Network error. Please try again.'});
+    const msg2 = e.message?.includes('401')?'🔑 API key issue. Admin se contact karo.':
+                 e.message?.includes('429')?'⏳ Bahut requests. 1 minute wait karo.':
+                 '⚠️ Network error. Internet check karo.';
+    S.chatMsgs.push({role:'assistant', content:msg2});
   }
   S.chatLoading = false;
   renderChat();
