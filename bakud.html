@@ -1,0 +1,1381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SSC Mate – Admin Panel</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+<!-- SheetJS for Excel -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<script>
+(function tryConfig(){
+  if(window.tailwind){
+    tailwind.config={theme:{extend:{fontFamily:{sans:["Nunito","sans-serif"],display:["Baloo 2","sans-serif"]}}}};
+  } else {
+    setTimeout(tryConfig, 50);
+  }
+})();
+</script>
+
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:"Nunito",sans-serif;background:#f1f5f9;margin:0}
+:root{--side:240px;--top:60px}
+/* Sidebar */
+#sidebar{position:fixed;top:0;left:0;bottom:0;width:var(--side);background:#0f172a;overflow-y:auto;z-index:100;transition:transform .3s}
+#sidebar::-webkit-scrollbar{width:4px}
+#sidebar::-webkit-scrollbar-track{background:transparent}
+#sidebar::-webkit-scrollbar-thumb{background:#334155;border-radius:2px}
+.nav-link{display:flex;align-items:center;gap:10px;padding:11px 20px;color:#94a3b8;font-size:13px;font-weight:700;cursor:pointer;transition:all .15s;border-left:3px solid transparent;text-decoration:none}
+.nav-link:hover{color:#e2e8f0;background:rgba(255,255,255,.05)}
+.nav-link.on{color:#f97316;background:rgba(249,115,22,.1);border-left-color:#f97316}
+.nav-link i{width:18px;text-align:center;font-size:15px}
+/* Main */
+#main{margin-left:var(--side);min-height:100vh;display:flex;flex-direction:column}
+#topbar{height:var(--top);background:#fff;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:sticky;top:0;z-index:50;box-shadow:0 1px 8px rgba(0,0,0,.06)}
+#pageArea{flex:1;padding:24px}
+/* Cards */
+.card{background:#fff;border-radius:16px;box-shadow:0 2px 12px rgba(15,23,42,.07);padding:20px}
+.stat-card{background:#fff;border-radius:16px;box-shadow:0 2px 12px rgba(15,23,42,.07);padding:20px;display:flex;flex-direction:column;gap:8px}
+/* Table */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{background:#f8fafc;padding:10px 14px;font-size:12px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.4px;text-align:left;border-bottom:2px solid #e2e8f0}
+.tbl td{padding:12px 14px;font-size:13px;color:#1e293b;border-bottom:1px solid #f1f5f9}
+.tbl tr:hover td{background:#fafafa}
+/* Inputs */
+.inp{width:100%;border:2px solid #e2e8f0;border-radius:10px;padding:11px 14px;font-size:14px;font-family:"Nunito",sans-serif;color:#1e293b;font-weight:600;outline:none;transition:border-color .2s}
+.inp:focus{border-color:#f97316}
+.lbl{display:block;font-size:11px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
+/* Badges */
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:800}
+.badge-green{background:#dcfce7;color:#16a34a}
+.badge-red{background:#fee2e2;color:#dc2626}
+.badge-blue{background:#dbeafe;color:#2563eb}
+.badge-orange{background:#fff7ed;color:#ea580c}
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:10px;font-size:13px;font-weight:800;font-family:"Nunito",sans-serif;border:none;cursor:pointer;transition:all .15s}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:linear-gradient(135deg,#1e3a5f,#2563eb);color:#fff}
+.btn-accent{background:linear-gradient(135deg,#f97316,#ea6a10);color:#fff}
+.btn-success{background:linear-gradient(135deg,#16a34a,#15803d);color:#fff}
+.btn-danger{background:#fee2e2;color:#dc2626}
+.btn-gray{background:#f1f5f9;color:#64748b}
+.btn-sm{padding:6px 12px;font-size:12px}
+/* Modal */
+#modal{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px}
+#modalBox{background:#fff;border-radius:20px;width:100%;max-width:580px;max-height:90vh;overflow-y:auto;box-shadow:0 30px 80px rgba(0,0,0,.3)}
+#modalBox::-webkit-scrollbar{width:4px}
+#modalBox::-webkit-scrollbar-thumb{background:#e2e8f0;border-radius:2px}
+.modal-hdr{background:linear-gradient(135deg,#1e3a5f,#172e4d);padding:18px 22px;border-radius:20px 20px 0 0;display:flex;align-items:center;justify-content:space-between;color:#fff}
+.modal-hdr h3{font-family:"Baloo 2",sans-serif;font-size:18px;font-weight:800}
+.modal-body{padding:22px}
+/* Section */
+.section{display:none}
+.section.on{display:block}
+/* Toast */
+#toast{position:fixed;bottom:24px;right:24px;background:#1e293b;color:#fff;padding:12px 20px;border-radius:14px;font-size:13px;font-weight:700;z-index:999;box-shadow:0 8px 30px rgba(0,0,0,.2);opacity:0;transition:opacity .3s;pointer-events:none}
+#toast.show{opacity:1}
+/* Auth overlay */
+#authOverlay{position:fixed;inset:0;background:linear-gradient(155deg,#0a1628 0%,#1e3a5f 50%,#172e4d 100%);display:flex;align-items:center;justify-content:center;z-index:999;padding:20px}
+/* Toggles */
+.toggle{width:44px;height:24px;background:#e2e8f0;border-radius:12px;position:relative;cursor:pointer;transition:background .2s;flex-shrink:0;border:none}
+.toggle.on{background:#16a34a}
+.toggle::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;background:#fff;border-radius:50%;transition:transform .2s;box-shadow:0 1px 4px rgba(0,0,0,.2)}
+.toggle.on::after{transform:translateX(20px)}
+/* Responsive sidebar */
+@media(max-width:768px){
+  #sidebar{transform:translateX(-100%)}
+  #sidebar.open{transform:translateX(0)}
+  #main{margin-left:0}
+}
+/* Spinner */
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{animation:spin .7s linear infinite}
+/* Excel template info */
+.excel-info{background:#f0fdf4;border:2px solid #bbf7d0;border-radius:12px;padding:14px;margin-bottom:14px}
+.excel-info code{background:#dcfce7;padding:2px 6px;border-radius:4px;font-size:12px;font-weight:700;color:#166534}
+/* Q row */
+.q-row{background:#f8fafc;border-radius:10px;padding:12px;border-left:3px solid #e2e8f0;margin-bottom:8px}
+.q-row.correct{border-left-color:#16a34a}
+</style>
+</head>
+<body>
+
+<!-- ═══════════ AUTH OVERLAY ═══════════ -->
+<div id="authOverlay">
+  <div style="background:#fff;border-radius:24px;padding:36px 32px;width:100%;max-width:400px;box-shadow:0 30px 80px rgba(0,0,0,.3)">
+    <div style="text-align:center;margin-bottom:28px">
+      <div style="width:64px;height:64px;background:linear-gradient(135deg,#1e3a5f,#2563eb);border-radius:18px;display:flex;align-items:center;justify-content:center;margin:0 auto 12px">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          <polyline points="9 12 11 14 15 10"/>
+        </svg>
+      </div>
+      <div style="font-family:'Baloo 2',sans-serif;font-size:26px;font-weight:800;color:#1e293b">Admin Login</div>
+      <div style="color:#64748b;font-size:13px;margin-top:4px">SSC Mate Control Panel</div>
+    </div>
+    <div style="margin-bottom:14px">
+      <label class="lbl">Admin Email</label>
+      <input id="loginEmail" type="email" class="inp" placeholder="admin@sscmate.com">
+    </div>
+    <div style="margin-bottom:20px">
+      <label class="lbl">Password</label>
+      <input id="loginPass" type="password" class="inp" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button onclick="doLogin()" id="loginBtn" class="btn btn-primary" style="width:100%;justify-content:center;padding:14px;font-size:15px">
+      🔐 Login
+    </button>
+    <div style="margin-top:12px;text-align:center">
+      <a href="index.html" style="font-size:12px;color:#94a3b8;font-weight:700">← Back to User App</a>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ SIDEBAR ═══════════ -->
+<div id="sidebar">
+  <div style="padding:18px 20px;border-bottom:1px solid rgba(255,255,255,.08);margin-bottom:8px">
+    <div style="font-family:'Baloo 2',sans-serif;font-size:22px;font-weight:800;color:#fff">SSC <span style="color:#f97316">Mate</span></div>
+    <div style="font-size:11px;color:#475569;font-weight:700;margin-top:2px">Admin Control Panel</div>
+  </div>
+  
+  <div onclick="nav('dashboard')" class="nav-link on" data-s="dashboard">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+    Dashboard
+  </div>
+  <div onclick="nav('banners')" class="nav-link" data-s="banners">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+    Ad Banners
+  </div>
+  <div onclick="nav('videos')" class="nav-link" data-s="videos">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+    Videos
+  </div>
+  <div onclick="nav('ebooks')" class="nav-link" data-s="ebooks">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+    E-Books & PDFs
+  </div>
+  <div onclick="nav('tests')" class="nav-link" data-s="tests">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+    Test Series
+  </div>
+  <div onclick="nav('coupons')" class="nav-link" data-s="coupons">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+    Coupons
+  </div>
+  <div onclick="nav('users')" class="nav-link" data-s="users">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    Users
+  </div>
+  <div onclick="nav('social')" class="nav-link" data-s="social">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+    Social Links
+  </div>
+  <div onclick="nav('settings')" class="nav-link" data-s="settings">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    Settings
+  </div>
+  
+  <div style="position:absolute;bottom:0;left:0;right:0;padding:16px 20px;border-top:1px solid rgba(255,255,255,.06)">
+    <div id="adminInfo" style="font-size:12px;color:#475569;margin-bottom:10px;font-weight:600"></div>
+    <button onclick="doLogout()" class="btn btn-danger btn-sm" style="width:100%;justify-content:center">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Logout
+    </button>
+  </div>
+</div>
+
+<!-- ═══════════ MAIN AREA ═══════════ -->
+<div id="main">
+  <!-- TOP BAR -->
+  <div id="topbar">
+    <div style="display:flex;align-items:center;gap:12px">
+    <button onclick="document.getElementById('sidebar').classList.toggle('open')" style="display:none;background:#f1f5f9;border:none;width:36px;height:36px;border-radius:8px;cursor:pointer;font-size:16px;align-items:center;justify-content:center" id="menuBtn">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+      <div>
+        <div id="pageTitle" style="font-family:'Baloo 2',sans-serif;font-size:20px;font-weight:800;color:#1e293b">Dashboard</div>
+        <div id="pageSubtitle" style="font-size:12px;color:#94a3b8;font-weight:600"></div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <div style="font-size:12px;color:#94a3b8;font-weight:700" id="liveBadge">
+        <span style="display:inline-block;width:7px;height:7px;background:#16a34a;border-radius:50%;margin-right:5px"></span>Live Sync ON
+      </div>
+      <a href="index.html" target="_blank" class="btn btn-gray btn-sm">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        View App
+      </a>
+    </div>
+  </div>
+
+  <!-- PAGE AREA -->
+  <div id="pageArea">
+
+    <!-- ─── DASHBOARD ─── -->
+    <div id="sec-dashboard" class="section on">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:24px">
+        <div class="stat-card">
+          <div style="width:44px;height:44px;background:#eff6ff;border-radius:12px;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+          <div style="font-family:'Baloo 2',sans-serif;font-size:32px;font-weight:800;color:#1e293b" id="s-users">—</div>
+          <div style="font-size:13px;font-weight:700;color:#64748b">Total Users</div>
+        </div>
+        <div class="stat-card">
+          <div style="width:44px;height:44px;background:#fff7ed;border-radius:12px;display:flex;align-items:center;justify-content:center">₹</div>
+          <div style="font-family:'Baloo 2',sans-serif;font-size:32px;font-weight:800;color:#1e293b" id="s-revenue">—</div>
+          <div style="font-size:13px;font-weight:700;color:#64748b">Total Revenue</div>
+        </div>
+        <div class="stat-card">
+          <div style="width:44px;height:44px;background:#f0fdf4;border-radius:12px;display:flex;align-items:center;justify-content:center">✅</div>
+          <div style="font-family:'Baloo 2',sans-serif;font-size:32px;font-weight:800;color:#1e293b" id="s-tests">—</div>
+          <div style="font-size:13px;font-weight:700;color:#64748b">Tests Taken</div>
+        </div>
+        <div class="stat-card">
+          <div style="width:44px;height:44px;background:#fdf4ff;border-radius:12px;display:flex;align-items:center;justify-content:center">🛒</div>
+          <div style="font-family:'Baloo 2',sans-serif;font-size:32px;font-weight:800;color:#1e293b" id="s-purchases">—</div>
+          <div style="font-size:13px;font-weight:700;color:#64748b">Ebook Sales</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px">
+        <div class="card">
+          <div style="font-weight:800;color:#1e293b;margin-bottom:14px;font-size:15px">🗄️Content Overview</div>
+          <div id="contentOverview" style="display:flex;flex-direction:column;gap:10px"></div>
+        </div>
+        <div class="card">
+          <div style="font-weight:800;color:#1e293b;margin-bottom:14px;font-size:15px">🕐Recent Purchases</div>
+          <div id="recentPurchases"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── BANNERS ─── -->
+    <div id="sec-banners" class="section">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <div style="font-weight:800;font-size:15px;color:#1e293b">All Banners</div>
+          <button onclick="openModal('addBanner')" class="btn btn-accent">➕ Add Banner</button>
+        </div>
+        <div id="bannerTbl"></div>
+      </div>
+    </div>
+
+    <!-- ─── VIDEOS ─── -->
+    <div id="sec-videos" class="section">
+      <div style="display:flex;gap:4px;background:#fff;border-radius:14px;padding:5px;box-shadow:var(--shadow);margin-bottom:16px">
+        <button onclick="videoSubTab('videos')" id="vsub-videos" class="btn btn-primary btn-sm" style="flex:1;justify-content:center;border-radius:9px">📹 Videos</button>
+        <button onclick="videoSubTab('playlists')" id="vsub-playlists" class="btn btn-gray btn-sm" style="flex:1;justify-content:center;border-radius:9px">📂 Playlists</button>
+      </div>
+      <div id="vsub-panel-videos" class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <div style="font-weight:800;font-size:15px;color:#1e293b">All Videos</div>
+          <button onclick="openModal('addVideo')" class="btn btn-accent">➕ Add Video</button>
+        </div>
+        <div id="videoTbl"></div>
+      </div>
+      <div id="vsub-panel-playlists" class="card" style="display:none">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+          <div style="font-weight:800;font-size:15px;color:#1e293b">📂 Playlists / Courses</div>
+          <button onclick="adminAddPlaylist()" class="btn btn-accent">➕ New Playlist</button>
+        </div>
+        <div style="font-size:13px;color:#64748b;margin-bottom:14px">
+          Playlists banao (e.g. "Hindi Grammar", "Maths", "GK") — phir video add karte waqt playlist assign karo.
+        </div>
+        <div id="playlistAdminList"></div>
+      </div>
+    </div>
+
+    <!-- ─── EBOOKS ─── -->
+    <div id="sec-ebooks" class="section">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <div style="font-weight:800;font-size:15px;color:#1e293b">All E-Books & PDFs</div>
+          <button onclick="openModal('addEbook')" class="btn btn-accent">➕ Add E-Book</button>
+        </div>
+        <div id="ebookTbl"></div>
+      </div>
+    </div>
+
+    <!-- ─── TESTS ─── -->
+    <div id="sec-tests" class="section">
+      <div style="display:grid;grid-template-columns:280px 1fr;gap:20px;align-items:start">
+        <!-- Topic list -->
+        <div class="card" style="position:sticky;top:80px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+            <div style="font-weight:800;font-size:14px;color:#1e293b">Test Topics</div>
+            <button onclick="openModal('addTopic')" class="btn btn-accent btn-sm">➕</button>
+          </div>
+          <div id="topicSidebar" style="display:flex;flex-direction:column;gap:6px"></div>
+        </div>
+        <!-- Question manager -->
+        <div id="qManager" style="display:none">
+          <div class="card" style="margin-bottom:16px">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div>
+                <div id="qManagerTitle" style="font-weight:900;font-size:16px;color:#1e293b"></div>
+                <div id="qManagerCount" style="font-size:12px;color:#64748b;margin-top:2px"></div>
+              </div>
+              <div style="display:flex;gap:8px">
+                <button onclick="openModal('addQuestion')" class="btn btn-success btn-sm">➕ Add Question</button>
+                <button onclick="openModal('bulkUpload')" class="btn btn-primary btn-sm">📊 Bulk Excel</button>
+              </div>
+            </div>
+          </div>
+          <!-- Tabs -->
+          <div style="display:flex;gap:0;background:#fff;border-radius:12px;padding:4px;box-shadow:0 2px 10px rgba(15,23,42,.07);margin-bottom:16px;border:1px solid #e2e8f0">
+            <button onclick="qTab('list')" id="qt-list" class="btn btn-primary btn-sm" style="flex:1;justify-content:center;border-radius:8px">📋 Question List</button>
+            <button onclick="qTab('add')" id="qt-add" class="btn btn-gray btn-sm" style="flex:1;justify-content:center;border-radius:8px">✏️ Quick Add</button>
+          </div>
+          <div id="qListPanel"></div>
+          <div id="qAddPanel" style="display:none">
+            <div class="card">
+              <div style="margin-bottom:12px"><label class="lbl">Question Text</label><textarea id="qq" class="inp" rows="3" placeholder="Enter question..."></textarea></div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+                <div><label class="lbl">Option A</label><input id="qoa" class="inp" placeholder="Option A"></div>
+                <div><label class="lbl">Option B</label><input id="qob" class="inp" placeholder="Option B"></div>
+                <div><label class="lbl">Option C</label><input id="qoc" class="inp" placeholder="Option C"></div>
+                <div><label class="lbl">Option D</label><input id="qod" class="inp" placeholder="Option D"></div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+                <div>
+                  <label class="lbl">Correct Answer</label>
+                  <select id="qcor" class="inp">
+                    <option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option>
+                  </select>
+                </div>
+                <div><label class="lbl">Explanation (optional)</label><input id="qex" class="inp" placeholder="Brief explanation..."></div>
+              </div>
+              <button onclick="saveQuestionInline()" class="btn btn-success">✓ Save Question</button>
+            </div>
+          </div>
+        </div>
+        <div id="qPlaceholder" class="card" style="text-align:center;padding:48px;color:#94a3b8">
+          ←
+          <div style="font-weight:700">Select a topic to manage questions</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── COUPONS ─── -->
+    <div id="sec-coupons" class="section">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <div style="font-weight:800;font-size:15px;color:#1e293b">Coupon Codes</div>
+          <button onclick="openModal('addCoupon')" class="btn btn-accent">➕ New Coupon</button>
+        </div>
+        <div id="couponTbl"></div>
+      </div>
+    </div>
+
+    <!-- ─── USERS ─── -->
+    <div id="sec-users" class="section">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <div style="font-weight:800;font-size:15px;color:#1e293b">Registered Users</div>
+          <span id="userCount" class="badge badge-blue">0 users</span>
+        </div>
+        <div id="userTbl"></div>
+      </div>
+    </div>
+
+    <!-- ─── SOCIAL LINKS ─── -->
+    <div id="sec-social" class="section">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <div style="font-weight:800;font-size:15px;color:#1e293b">Social & App Links</div>
+          <button onclick="openModal('addSocial')" class="btn btn-accent">➕ Add Link</button>
+        </div>
+        <div id="socialTbl"></div>
+      </div>
+    </div>
+
+    <!-- ─── SETTINGS ─── -->
+    <div id="sec-settings" class="section">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px">
+        <div class="card">
+          <div style="font-weight:800;font-size:15px;color:#1e293b;margin-bottom:16px">🔑API Keys</div>
+          <div style="margin-bottom:12px"><label class="lbl">Razorpay Key ID</label><input id="sRzpKey" class="inp" placeholder="rzp_live_..."></div>
+          <div style="margin-bottom:16px"><label class="lbl">Groq API Key</label><input id="sGroqKey" class="inp" placeholder="gsk_..."></div>
+          <button onclick="saveSettings()" class="btn btn-primary">💾 Save Keys</button>
+          <div style="margin-top:10px;font-size:12px;color:#94a3b8">Note: API keys are also hardcoded in index.html for direct access.</div>
+        </div>
+        <div class="card">
+          <div style="font-weight:800;font-size:15px;color:#1e293b;margin-bottom:16px">🏪App Info</div>
+          <div style="margin-bottom:12px"><label class="lbl">App Name</label><input id="sAppName" class="inp" value="SSC Mate"></div>
+          <div style="margin-bottom:12px"><label class="lbl">WhatsApp Number (with country code)</label><input id="sWaNum" class="inp" placeholder="919876543210"></div>
+          <div style="margin-bottom:16px"><label class="lbl">Admin Email</label><input id="sAdminEmail" class="inp" placeholder="admin@sscmate.com"></div>
+          <button onclick="saveAppInfo()" class="btn btn-primary">💾 Save Info</button>
+        </div>
+        <div class="card">
+          <div style="font-weight:800;font-size:15px;color:#1e293b;margin-bottom:16px">🗄️Firebase Setup Guide</div>
+          <div style="font-size:13px;color:#64748b;line-height:1.8">
+            <div style="margin-bottom:6px">1. Create project at <strong>console.firebase.google.com</strong></div>
+            <div style="margin-bottom:6px">2. Enable <strong>Phone Authentication</strong> & Email/Password</div>
+            <div style="margin-bottom:6px">3. Create Firestore Database</div>
+            <div style="margin-bottom:6px">4. Add Firestore security rules</div>
+            <div style="margin-bottom:6px">5. Replace config in both HTML files</div>
+            <div style="margin-bottom:6px">6. Enable Blaze plan for Phone OTP</div>
+          </div>
+          <div style="background:#f8fafc;border-radius:10px;padding:12px;margin-top:12px;font-family:monospace;font-size:11px;color:#475569">
+            Firestore Collections:<br>
+            📁 banners | videos | ebooks<br>
+            📁 testTopics/{id}/questions<br>
+            📁 coupons | purchases<br>
+            📁 testResults | users<br>
+            📁 socialLinks | settings
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end pageArea -->
+</div><!-- end main -->
+
+<!-- ═══════════ MODAL ═══════════ -->
+<div id="modal" style="display:none" onclick="if(event.target===this)closeModal()">
+  <div id="modalBox">
+    <div class="modal-hdr">
+      <h3 id="modalTitle">Modal</h3>
+      <button onclick="closeModal()" style="background:rgba(255,255,255,.15);border:none;color:#fff;width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:14px">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+// ══════════════════════════════════════
+// ⚙️  CONFIG — Must match index.html
+// ══════════════════════════════════════
+const FB_CONFIG = {
+  apiKey: "AIzaSyA4QTpdBvip1L-RvVEp5IR-tUn4ZQw9UxY",
+  authDomain: "sikshapath-education.firebaseapp.com",
+  databaseURL: "https://sikshapath-education-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "sikshapath-education",
+  storageBucket: "sikshapath-education.firebasestorage.app",
+  messagingSenderId: "274162437758",
+  appId: "1:274162437758:web:e153b0eba458598533522f"
+};
+const ADMIN_EMAIL = "mansusuh@9812.com"; // Must match admin user email in Firebase Auth
+
+// ══════════════════════════════════════
+// 🔥 FIREBASE
+// ══════════════════════════════════════
+firebase.initializeApp(FB_CONFIG);
+const auth = firebase.auth();
+const db   = firebase.firestore();
+
+// ══════════════════════════════════════
+// 📦 STATE
+// ══════════════════════════════════════
+let adminUser = null;
+let currentSection = 'dashboard';
+let currentTopicId = null;
+let currentTopicName = '';
+let editingId = null;       // for edit operations
+let pendingExcelQs = [];    // buffered from Excel parse
+
+// ══════════════════════════════════════
+// 🔐 AUTH
+// ══════════════════════════════════════
+async function doLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass  = document.getElementById('loginPass').value;
+  if (!email||!pass) { toast('Email aur password daalen', 'error'); return; }
+  const btn = document.getElementById('loginBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span style="display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;margin-right:8px;vertical-align:middle"></span>Logging in...';
+  try {
+    const cred = await auth.signInWithEmailAndPassword(email, pass);
+    // Verify admin role
+    const doc = await db.collection('users').doc(cred.user.uid).get();
+    if (!doc.exists || (doc.data().role !== 'admin' && email !== ADMIN_EMAIL)) {
+      await auth.signOut();
+      throw new Error('Not an admin account');
+    }
+  } catch(e) {
+    toast('Login failed: ' + e.message, 'error');
+    btn.disabled = false;
+    btn.innerHTML = '🔓 Login';
+  }
+}
+
+auth.onAuthStateChanged(async user => {
+  if (user) {
+    adminUser = user;
+    // Ensure admin
+    if (user.email !== ADMIN_EMAIL) {
+      const doc = await db.collection('users').doc(user.uid).get();
+      if (!doc.exists || doc.data().role !== 'admin') { await auth.signOut(); return; }
+    }
+    document.getElementById('authOverlay').style.display = 'none';
+    document.getElementById('adminInfo').textContent = user.email;
+    loadDashboard();
+    loadAllData();
+  } else {
+    document.getElementById('authOverlay').style.display = 'flex';
+  }
+});
+
+async function doLogout() {
+  if (!confirm('Logout karna chahte hain?')) return;
+  await auth.signOut();
+}
+
+// ══════════════════════════════════════
+// 🧭 NAVIGATION
+// ══════════════════════════════════════
+const TITLES = { dashboard:'Dashboard', banners:'Ad Banners', videos:'Videos', ebooks:'E-Books & PDFs', tests:'Test Series', coupons:'Coupons', users:'Users', social:'Social Links', settings:'Settings' };
+
+function nav(s) {
+  document.querySelectorAll('.section').forEach(el => el.classList.remove('on'));
+  document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('on'));
+  document.getElementById('sec-'+s).classList.add('on');
+  document.querySelector(`[data-s="${s}"]`).classList.add('on');
+  document.getElementById('pageTitle').textContent = TITLES[s]||s;
+  currentSection = s;
+  // Load section data
+  if (s==='banners') loadBanners();
+  if (s==='videos') loadVideos();
+  if (s==='ebooks') loadEbooks();
+  if (s==='tests') loadTopics();
+  if (s==='coupons') loadCoupons();
+  if (s==='users') loadUsers();
+  if (s==='social') loadSocial();
+  if (s==='settings') loadSettings();
+}
+
+// ══════════════════════════════════════
+// 📊 DASHBOARD
+// ══════════════════════════════════════
+async function loadDashboard() {
+  try {
+    const [u,p,t,e,r] = await Promise.all([
+      db.collection('users').get(),
+      db.collection('purchases').get(),
+      db.collection('testResults').get(),
+      db.collection('ebooks').get(),
+      db.collection('banners').get()
+    ]);
+    document.getElementById('s-users').textContent = u.size;
+    const rev = p.docs.reduce((s,d)=>s+(d.data().amount||0),0);
+    document.getElementById('s-revenue').textContent = '₹'+rev.toLocaleString('en-IN');
+    document.getElementById('s-tests').textContent = t.size;
+    document.getElementById('s-purchases').textContent = p.size;
+    document.getElementById('contentOverview').innerHTML = [
+      {icon:'fa-image',color:'#2563eb',label:'Active Banners',count:r.docs.filter(d=>d.data().active).length},
+      {icon:'fa-play-circle',color:'#dc2626',label:'Videos',count:0},
+      {icon:'fa-book-open',color:'#f97316',label:'E-Books',count:e.size},
+    ].map(x=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f1f5f9">
+      <div style="display:flex;align-items:center;gap:8px"><span style="font-size:13px;font-weight:700;color:#475569">${x.label}</span></div>
+      <span style="font-family:'Baloo 2',sans-serif;font-weight:800;color:#1e293b">${x.count}</span>
+    </div>`).join('');
+    // Recent purchases
+    const recent = p.docs.sort((a,b)=>(b.data().createdAt?.seconds||0)-(a.data().createdAt?.seconds||0)).slice(0,5);
+    document.getElementById('recentPurchases').innerHTML = recent.length ? recent.map(d=>{
+      const pd = d.data();
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f1f5f9;font-size:13px">
+        <div style="font-weight:700;color:#475569;max-width:160px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${pd.ebookTitle||'Ebook'}</div>
+        <span style="font-weight:800;color:#16a34a">₹${pd.amount}</span>
+      </div>`;
+    }).join('') : '<div style="color:#94a3b8;font-size:13px">No purchases yet</div>';
+    // Video count
+    const vc = await db.collection('videos').get();
+    document.getElementById('contentOverview').innerHTML = document.getElementById('contentOverview').innerHTML.replace('count:0',''); // hacky fix
+    loadDashboardVideos(vc.size);
+  } catch(e) { console.error(e); }
+}
+
+function loadDashboardVideos(count) {
+  // replace the videos row
+  const rows = document.querySelectorAll('#contentOverview > div');
+  if (rows[1]) rows[1].querySelector('span:last-child').textContent = count;
+}
+
+async function loadAllData() {
+  const vc = await db.collection('videos').get();
+  loadDashboardVideos(vc.size);
+}
+
+// ══════════════════════════════════════
+// 🖼️ BANNERS
+// ══════════════════════════════════════
+async function loadBanners() {
+  const snap = await db.collection('banners').orderBy('order','asc').get();
+  const rows = snap.docs.map(d=>({id:d.id,...d.data()}));
+  document.getElementById('bannerTbl').innerHTML = `
+    <table class="tbl">
+      <thead><tr><th>Preview</th><th>Title</th><th>Image URL</th><th>Status</th><th>Order</th><th>Actions</th></tr></thead>
+      <tbody>${rows.length ? rows.map(b=>`<tr>
+        <td>${b.imageUrl?`<img src="${b.imageUrl}" style="height:44px;border-radius:8px;object-fit:cover;max-width:80px" onerror="this.style.display='none'">`:'<div style="width:80px;height:44px;background:linear-gradient(135deg,#f97316,#1e3a5f);border-radius:8px;display:flex;align-items:center;justify-content:center;color:white;font-size:10px;font-weight:700">Gradient</div>'}</td>
+        <td><strong>${b.title||'—'}</strong><div style="font-size:11px;color:#94a3b8">${b.subtitle||''}</div></td>
+        <td style="max-width:200px"><div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:#94a3b8">${b.imageUrl||'—'}</div></td>
+        <td><span class="badge ${b.active?'badge-green':'badge-red'}">${b.active?'Active':'Hidden'}</span></td>
+        <td>${b.order||0}</td>
+        <td><div style="display:flex;gap:6px">
+          <button onclick="editBanner('${b.id}')" class="btn btn-gray btn-sm">✏️</button>
+          <button onclick="deleteBanner('${b.id}')" class="btn btn-danger btn-sm">🗑️</button>
+        </div></td>
+      </tr>`).join('') : '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:30px">No banners yet</td></tr>'}</tbody>
+    </table>`;
+}
+
+function openModal_addBanner(data={}) {
+  document.getElementById('modalTitle').textContent = data.id?'Edit Banner':'Add Banner';
+  document.getElementById('modalBody').innerHTML = `
+    <div style="margin-bottom:12px"><label class="lbl">Title</label><input id="m-bnTitle" class="inp" value="${data.title||''}" placeholder="e.g. 50% OFF on E-Books!"></div>
+    <div style="margin-bottom:12px"><label class="lbl">Subtitle</label><input id="m-bnSub" class="inp" value="${data.subtitle||''}" placeholder="Grab it now — limited time!"></div>
+    <div style="margin-bottom:12px"><label class="lbl">Image URL <span style="color:#94a3b8;font-weight:400">(optional — if blank, gradient will show)</span></label><input id="m-bnImg" class="inp" value="${data.imageUrl||''}" placeholder="https://...image.jpg"></div>
+    <div style="margin-bottom:12px"><label class="lbl">Gradient (CSS) <span style="color:#94a3b8;font-weight:400">(when no image)</span></label><input id="m-bnGrad" class="inp" value="${data.gradient||'linear-gradient(135deg,#f97316 0%,#1e3a5f 100%)'}" placeholder="linear-gradient(...)"></div>
+    <div style="margin-bottom:12px"><label class="lbl">Click Link (optional)</label><input id="m-bnLink" class="inp" value="${data.link||''}" placeholder="https://..."></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
+      <div><label class="lbl">Order (1=first)</label><input id="m-bnOrder" type="number" class="inp" value="${data.order||1}"></div>
+      <div style="display:flex;align-items:center;gap:8px;padding-top:20px">
+        <button class="toggle ${data.active!==false?'on':''}" id="m-bnActive" onclick="this.classList.toggle('on')"></button>
+        <span style="font-size:13px;font-weight:700">Active</span>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button onclick="closeModal()" class="btn btn-gray" style="flex:1;justify-content:center">Cancel</button>
+      <button onclick="saveBanner('${data.id||''}')" class="btn btn-accent" style="flex:2;justify-content:center">💾 Save Banner</button>
+    </div>`;
+}
+
+async function saveBanner(id) {
+  const d = { title:v('m-bnTitle'), subtitle:v('m-bnSub'), imageUrl:v('m-bnImg'), gradient:v('m-bnGrad'), link:v('m-bnLink'), order:parseInt(v('m-bnOrder'))||1, active:document.getElementById('m-bnActive').classList.contains('on') };
+  if (!d.title) { toast('Title required', 'error'); return; }
+  try {
+    id ? await db.collection('banners').doc(id).update(d)
+       : await db.collection('banners').add({...d, createdAt:ts()});
+    closeModal(); loadBanners(); toast('Banner saved!', 'success');
+  } catch(e) { toast('Error: '+e.message, 'error'); }
+}
+
+async function editBanner(id) { const doc=await db.collection('banners').doc(id).get(); openModal_addBanner({id,...doc.data()}); openModalBox(); }
+async function deleteBanner(id) { if(!confirm('Delete?')) return; await db.collection('banners').doc(id).delete(); loadBanners(); toast('Deleted','success'); }
+
+// ══════════════════════════════════════
+// 📹 VIDEOS
+// ══════════════════════════════════════
+async function loadVideos() {
+  const snap = await db.collection('videos').orderBy('createdAt','desc').get();
+  const rows = snap.docs.map(d=>({id:d.id,...d.data()}));
+  document.getElementById('videoTbl').innerHTML = `
+    <table class="tbl">
+      <thead><tr><th>Thumbnail</th><th>Title</th><th>Playlist</th><th>Type</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>${rows.length ? rows.map(v=>{
+        const ytId = extractYtId(v.youtubeUrl||'');
+        const thumb = v.thumbnail||(ytId?`https://img.youtube.com/vi/${ytId}/mqdefault.jpg`:'');
+        return `<tr>
+          <td>${thumb?`<img src="${thumb}" style="height:48px;width:80px;object-fit:cover;border-radius:8px">`:'—'}</td>
+          <td><strong>${v.title}</strong><div style="font-size:11px;color:#94a3b8;max-width:200px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${v.description||''}</div></td>
+          <td><strong>${v.playlist||'—'}</strong><div style='font-size:11px;color:#94a3b8'>${v.subject||''}</div></td>
+          <td><span class="badge ${v.type==='live'?'badge-red':'badge-blue'}">${v.type==='live'?'🔴 Live':'Recorded'}</span></td>
+          <td><span class="badge ${v.active!==false?'badge-green':'badge-red'}">${v.active!==false?'Active':'Hidden'}</span></td>
+          <td><div style="display:flex;gap:6px">
+            <button onclick="editVideo('${v.id}')" class="btn btn-gray btn-sm">✏️</button>
+            <button onclick="deleteVideo('${v.id}')" class="btn btn-danger btn-sm">🗑️</button>
+          </div></td>
+        </tr>`;
+      }).join('') : '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:30px">No videos yet</td></tr>'}</tbody>
+    </table>`;
+}
+
+function openModal_addVideo(data={}) {
+  document.getElementById('modalTitle').textContent = data.id?'Edit Video':'Add Video';
+  document.getElementById('modalBody').innerHTML = `
+    <div style="margin-bottom:12px"><label class="lbl">Video Title</label><input id="m-vTitle" class="inp" value="${data.title||''}" placeholder="e.g. English Vocabulary Class 1"></div>
+    <div style="margin-bottom:12px"><label class="lbl">Subject / Category</label><input id="m-vSubj" class="inp" value="${data.subject||''}" placeholder="e.g. English, Maths, GK"></div>
+    <div style="margin-bottom:12px">
+      <label class="lbl">Type</label>
+      <select id="m-vType" class="inp" onchange="toggleLiveField()">
+        <option value="recorded" ${data.type!=='live'?'selected':''}>📹 Recorded Video</option>
+        <option value="live" ${data.type==='live'?'selected':''}>🔴 Live Class</option>
+      </select>
+    </div>
+    <div id="ytUrlField" style="margin-bottom:12px">
+      <label class="lbl">YouTube URL or Video ID</label>
+      <input id="m-vYt" class="inp" value="${data.youtubeUrl||data.youtubeId||''}" placeholder="https://youtube.com/watch?v=... or just 11-char ID">
+      <div style="font-size:11px;color:#94a3b8;margin-top:4px">Example ID: dQw4w9WgXcQ (from youtube.com/watch?v=<strong>dQw4w9WgXcQ</strong>)</div>
+    </div>
+    <div id="liveEmbedField" style="margin-bottom:12px;${data.type==='live'?'':'display:none'}">
+      <label class="lbl">Live Embed Code <span style="color:#94a3b8">(YouTube live iframe)</span></label>
+      <textarea id="m-vEmbed" class="inp" rows="3" placeholder='&lt;iframe src="https://www.youtube.com/embed/LIVE_ID" ...&gt;&lt;/iframe&gt;'>${data.embedCode||''}</textarea>
+    </div>
+    <div style="margin-bottom:12px"><label class="lbl">Custom Thumbnail URL <span style="color:#94a3b8">(optional)</span></label><input id="m-vThumb" class="inp" value="${data.thumbnail||''}" placeholder="https://...thumbnail.jpg"></div>
+    <div style="margin-bottom:20px"><label class="lbl">Description</label><textarea id="m-vDesc" class="inp" rows="2" placeholder="Brief description...">${data.description||''}</textarea></div>
+    <div style="display:flex;gap:10px">
+      <button onclick="closeModal()" class="btn btn-gray" style="flex:1;justify-content:center">Cancel</button>
+      <button onclick="saveVideo('${data.id||''}')" class="btn btn-accent" style="flex:2;justify-content:center">💾 Save Video</button>
+    </div>`;
+}
+
+function toggleLiveField() {
+  const isLive = document.getElementById('m-vType')?.value === 'live';
+  const lf = document.getElementById('liveEmbedField');
+  const yf = document.getElementById('ytUrlField');
+  if (lf) lf.style.display = isLive ? '' : 'none';
+  if (yf) yf.style.display = isLive ? 'none' : '';
+}
+
+async function saveVideo(id) {
+  const d = { title:v('m-vTitle'), subject:v('m-vSubj'), type:v('m-vType'), playlist:v('m-vPlaylist'), youtubeUrl:v('m-vYt'), embedCode:v('m-vEmbed'), thumbnail:v('m-vThumb'), description:v('m-vDesc'), active:true };
+  if (!d.title||(d.type!=='live'&&!d.youtubeUrl)) { toast('Title and YouTube URL required', 'error'); return; }
+  try {
+    id ? await db.collection('videos').doc(id).update(d)
+       : await db.collection('videos').add({...d, createdAt:ts()});
+    closeModal(); loadVideos(); toast('Video saved!', 'success');
+  } catch(e) { toast('Error: '+e.message, 'error'); }
+}
+
+async function editVideo(id) { const doc=await db.collection('videos').doc(id).get(); openModal_addVideo({id,...doc.data()}); openModalBox(); setTimeout(toggleLiveField,100); }
+async function deleteVideo(id) { if(!confirm('Delete?')) return; await db.collection('videos').doc(id).delete(); loadVideos(); toast('Deleted','success'); }
+
+// ════ VIDEO SUB-TABS ════
+function videoSubTab(tab) {
+  document.getElementById('vsub-panel-videos').style.display    = tab==='videos'    ? '' : 'none';
+  document.getElementById('vsub-panel-playlists').style.display = tab==='playlists' ? '' : 'none';
+  const vBtn = document.getElementById('vsub-videos');
+  const pBtn = document.getElementById('vsub-playlists');
+  if(vBtn) { vBtn.className = tab==='videos'    ? 'btn btn-primary btn-sm' : 'btn btn-gray btn-sm'; vBtn.style = 'flex:1;justify-content:center;border-radius:9px'; }
+  if(pBtn) { pBtn.className = tab==='playlists' ? 'btn btn-primary btn-sm' : 'btn btn-gray btn-sm'; pBtn.style = 'flex:1;justify-content:center;border-radius:9px'; }
+  if (tab==='playlists') loadAdminPlaylists();
+}
+
+// ════ PLAYLISTS ════
+let _playlists = [];
+
+async function loadAdminPlaylists() {
+  try {
+    const snap = await db.collection('playlists').orderBy('order','asc').get();
+    _playlists = snap.docs.map(d=>({id:d.id,...d.data()}));
+  } catch(e) {
+    const snap = await db.collection('playlists').get();
+    _playlists = snap.docs.map(d=>({id:d.id,...d.data()}));
+  }
+  const el = document.getElementById('playlistAdminList');
+  if (!el) return;
+  if (!_playlists.length) {
+    el.innerHTML = '<div style="text-align:center;padding:24px;color:#94a3b8"><div style="font-size:32px;margin-bottom:8px">📂</div>No playlists yet. Create your first!</div>';
+    return;
+  }
+  el.innerHTML = _playlists.map(pl=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:#f8fafc;border-radius:12px;margin-bottom:8px;border-left:4px solid #2563eb">
+      <div>
+        <div style="font-weight:800;font-size:14px;color:#1e293b">${pl.name}</div>
+        <div style="font-size:12px;color:#64748b;margin-top:2px">${pl.description||'No description'} • Order: ${pl.order||1}</div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button onclick="editPlaylist('${pl.id}')" class="btn btn-gray btn-sm">✏️</button>
+        <button onclick="deletePlaylist('${pl.id}')" class="btn btn-danger btn-sm">🗑️</button>
+      </div>
+    </div>`).join('');
+}
+
+function adminAddPlaylist() {
+  showModal(`<div class="modal-title">📂 Create New Playlist</div>
+    <div class="form-group"><label class="lbl">Playlist Name</label><input id="m-plName" class="inp" placeholder="e.g. SSC English Grammar, Mathematics, GK"></div>
+    <div class="form-group"><label class="lbl">Description (optional)</label><input id="m-plDesc" class="inp" placeholder="Short description..."></div>
+    <div class="form-group"><label class="lbl">Display Order</label><input id="m-plOrder" type="number" class="inp" value="1" min="1"></div>
+    <div style="display:flex;gap:10px">
+      <button onclick="closeModal()" class="btn btn-gray" style="flex:1;justify-content:center">Cancel</button>
+      <button onclick="savePlaylist('')" class="btn btn-accent" style="flex:2;justify-content:center">💾 Save Playlist</button>
+    </div>`);
+  openModalBox();
+}
+
+async function editPlaylist(id) {
+  const pl = _playlists.find(p=>p.id===id)||{};
+  showModal(`<div class="modal-title">✏️ Edit Playlist</div>
+    <div class="form-group"><label class="lbl">Playlist Name</label><input id="m-plName" class="inp" value="${pl.name||''}"></div>
+    <div class="form-group"><label class="lbl">Description</label><input id="m-plDesc" class="inp" value="${pl.description||''}"></div>
+    <div class="form-group"><label class="lbl">Display Order</label><input id="m-plOrder" type="number" class="inp" value="${pl.order||1}"></div>
+    <div style="display:flex;gap:10px">
+      <button onclick="closeModal()" class="btn btn-gray" style="flex:1;justify-content:center">Cancel</button>
+      <button onclick="savePlaylist('${id}')" class="btn btn-accent" style="flex:2;justify-content:center">💾 Update</button>
+    </div>`);
+  openModalBox();
+}
+
+async function savePlaylist(id) {
+  const name = document.getElementById('m-plName')?.value.trim();
+  if (!name) { toast('Playlist name required','error'); return; }
+  const d = { name, description:document.getElementById('m-plDesc')?.value.trim()||'', order:parseInt(document.getElementById('m-plOrder')?.value)||1 };
+  try {
+    id ? await db.collection('playlists').doc(id).update(d) : await db.collection('playlists').add({...d, createdAt:ts()});
+    closeModal(); loadAdminPlaylists(); toast('Playlist saved! ✅','success');
+  } catch(e) { toast('Error: '+e.message,'error'); }
+}
+
+async function deletePlaylist(id) {
+  if (!confirm('Delete playlist? Videos will remain but without playlist.')) return;
+  await db.collection('playlists').doc(id).delete();
+  loadAdminPlaylists(); toast('Playlist deleted','success');
+}
+
+// ══════════════════════════════════════
+// 📚 EBOOKS
+// ══════════════════════════════════════
+async function loadEbooks() {
+  const snap = await db.collection('ebooks').orderBy('createdAt','desc').get();
+  const rows = snap.docs.map(d=>({id:d.id,...d.data()}));
+  document.getElementById('ebookTbl').innerHTML = `
+    <table class="tbl">
+      <thead><tr><th>Cover</th><th>Title</th><th>Type</th><th>Price</th><th>MRP</th><th>Category</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>${rows.length ? rows.map(b=>`<tr>
+        <td>${b.coverUrl?`<img src="${b.coverUrl}" style="height:48px;width:36px;object-fit:cover;border-radius:6px">`:'<div style="width:36px;height:48px;background:linear-gradient(135deg,#1e3a5f,#2563eb);border-radius:6px;display:flex;align-items:center;justify-content:center">📖</div>'}</td>
+        <td><strong style="font-size:13px">${b.title}</strong><div style="font-size:11px;color:#94a3b8;max-width:180px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${b.description||''}</div></td>
+        <td><span class="badge ${b.type==='free'?'badge-green':'badge-orange'}">${b.type==='free'?'Free':'Paid'}</span></td>
+        <td><strong style="color:#f97316">${b.type==='free'?'—':'₹'+b.price}</strong></td>
+        <td><span style="text-decoration:line-through;color:#94a3b8">${b.strikePrice?'₹'+b.strikePrice:'—'}</span></td>
+        <td><span class="badge badge-blue">${b.category||'ebook'}</span></td>
+        <td><span class="badge ${b.active!==false?'badge-green':'badge-red'}">${b.active!==false?'Active':'Hidden'}</span></td>
+        <td><div style="display:flex;gap:6px">
+          <button onclick="editEbook('${b.id}')" class="btn btn-gray btn-sm">✏️</button>
+          <button onclick="deleteEbook('${b.id}')" class="btn btn-danger btn-sm">🗑️</button>
+        </div></td>
+      </tr>`).join('') : '<tr><td colspan="8" style="text-align:center;color:#94a3b8;padding:30px">No ebooks yet</td></tr>'}</tbody>
+    </table>`;
+}
+
+function openModal_addEbook(data={}) {
+  document.getElementById('modalTitle').textContent = data.id?'Edit E-Book':'Add E-Book';
+  document.getElementById('modalBody').innerHTML = `
+    <div style="margin-bottom:12px"><label class="lbl">Title</label><input id="m-ebTitle" class="inp" value="${data.title||''}" placeholder="e.g. SSC CGL Complete Vocabulary"></div>
+    <div style="margin-bottom:12px"><label class="lbl">Description</label><input id="m-ebDesc" class="inp" value="${data.description||''}" placeholder="Short description..."></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+      <div>
+        <label class="lbl">Type</label>
+        <select id="m-ebType" class="inp" onchange="toggleEbPricing()">
+          <option value="free" ${data.type==='free'?'selected':''}>Free</option>
+          <option value="paid" ${data.type==='paid'?'selected':''}>Paid</option>
+        </select>
+      </div>
+      <div>
+        <label class="lbl">Category</label>
+        <select id="m-ebCat" class="inp">
+          <option value="ebook" ${data.category==='ebook'?'selected':''}>E-Book</option>
+          <option value="pdf" ${data.category==='pdf'?'selected':''}>PDF Notes</option>
+          <option value="prevPaper" ${data.category==='prevPaper'?'selected':''}>Previous Paper</option>
+        </select>
+      </div>
+    </div>
+    <div id="ebPricing" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;${data.type!=='paid'?'display:none':''}">
+      <div><label class="lbl">Price (₹) — Payable Amount</label><input id="m-ebPrice" type="number" class="inp" value="${data.price||''}" placeholder="299"></div>
+      <div><label class="lbl">Strike Price (₹) — MRP</label><input id="m-ebStrike" type="number" class="inp" value="${data.strikePrice||''}" placeholder="599"></div>
+    </div>
+    <div style="margin-bottom:12px">
+      <label class="lbl">PDF URL <span style="color:#94a3b8">(Google Drive share link or direct PDF link)</span></label>
+      <input id="m-ebPdf" class="inp" value="${data.pdfUrl||''}" placeholder="https://drive.google.com/file/d/...">
+      <div style="font-size:11px;color:#94a3b8;margin-top:4px">Google Drive: File → Share → "Anyone with link" → Copy → paste here</div>
+    </div>
+    <div style="margin-bottom:20px"><label class="lbl">Cover Image URL</label><input id="m-ebCover" class="inp" value="${data.coverUrl||''}" placeholder="https://...cover.jpg"></div>
+    <div style="display:flex;gap:10px">
+      <button onclick="closeModal()" class="btn btn-gray" style="flex:1;justify-content:center">Cancel</button>
+      <button onclick="saveEbook('${data.id||''}')" class="btn btn-accent" style="flex:2;justify-content:center">💾 Save E-Book</button>
+    </div>`;
+}
+
+function toggleEbPricing() {
+  const tp = document.getElementById('m-ebType')?.value;
+  const pf = document.getElementById('ebPricing');
+  if (pf) pf.style.display = tp==='paid' ? 'grid' : 'none';
+}
+
+async function saveEbook(id) {
+  const type = v('m-ebType');
+  const d = { title:v('m-ebTitle'), description:v('m-ebDesc'), type, category:v('m-ebCat'), price:parseFloat(v('m-ebPrice'))||0, strikePrice:parseFloat(v('m-ebStrike'))||0, pdfUrl:v('m-ebPdf'), coverUrl:v('m-ebCover'), active:true };
+  if (!d.title) { toast('Title required', 'error'); return; }
+  if (d.type==='paid' && !d.price) { toast('Price required for paid ebook', 'error'); return; }
+  try {
+    id ? await db.collection('ebooks').doc(id).update(d)
+       : await db.collection('ebooks').add({...d, createdAt:ts()});
+    closeModal(); loadEbooks(); toast('E-Book saved!', 'success');
+  } catch(e) { toast('Error: '+e.message, 'error'); }
+}
+
+async function editEbook(id) { const doc=await db.collection('ebooks').doc(id).get(); openModal_addEbook({id,...doc.data()}); openModalBox(); setTimeout(toggleEbPricing,100); }
+async function deleteEbook(id) { if(!confirm('Delete?')) return; await db.collection('ebooks').doc(id).delete(); loadEbooks(); toast('Deleted','success'); }
+
+// ══════════════════════════════════════
+// ✅ TEST SERIES
+// ══════════════════════════════════════
+async function loadTopics() {
+  const snap = await db.collection('testTopics').orderBy('createdAt','asc').get();
+  const topics = snap.docs.map(d=>({id:d.id,...d.data()}));
+  document.getElementById('topicSidebar').innerHTML = topics.length ? topics.map(t=>`
+    <div onclick="selectTopic('${t.id}','${escQ(t.name)}')" style="padding:10px 12px;border-radius:10px;cursor:pointer;border:2px solid ${currentTopicId===t.id?'#f97316':'#e2e8f0'};background:${currentTopicId===t.id?'#fff7ed':'#fff'};transition:all .15s">
+      <div style="font-weight:800;font-size:13px;color:${currentTopicId===t.id?'#f97316':'#1e293b'}">${t.name}</div>
+      <div style="font-size:11px;color:#94a3b8;margin-top:2px">${t.questionCount||0} Qs • ${t.duration||30} min</div>
+      <div style="display:flex;gap:5px;margin-top:6px">
+        <button onclick="event.stopPropagation();editTopic('${t.id}')" class="btn btn-gray btn-sm">✏️</button>
+        <button onclick="event.stopPropagation();deleteTopic('${t.id}')" class="btn btn-danger btn-sm">🗑️</button>
+      </div>
+    </div>`).join('') : '<div style="color:#94a3b8;font-size:13px;padding:10px">No topics yet</div>';
+}
+
+async function selectTopic(id, name) {
+  currentTopicId = id; currentTopicName = name;
+  document.getElementById('qPlaceholder').style.display = 'none';
+  document.getElementById('qManager').style.display = 'block';
+  document.getElementById('qManagerTitle').textContent = name;
+  loadTopics(); // refresh sidebar highlights
+  loadQuestions();
+}
+
+async function loadQuestions() {
+  const snap = await db.collection('testTopics').doc(currentTopicId).collection('questions').orderBy('createdAt','asc').get();
+  const qs = snap.docs.map(d=>({id:d.id,...d.data()}));
+  document.getElementById('qManagerCount').textContent = `${qs.length} question${qs.length!==1?'s':''}`;
+  document.getElementById('qListPanel').innerHTML = qs.length ? qs.map((q,i)=>`
+    <div class="q-row ${['A','B','C','D'].includes(q.correct)?'correct':''}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+        <div style="font-weight:700;font-size:13px;color:#1e293b;flex:1;margin-right:10px">Q${i+1}: ${q.question}</div>
+        <button onclick="deleteQuestion('${q.id}')" class="btn btn-danger btn-sm" style="flex-shrink:0">🗑️</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:4px;font-size:12px;color:#64748b">
+        <span ${q.correct==='A'?'style="color:#16a34a;font-weight:800"':''}>${q.correct==='A'?'✓ ':''}A: ${q.optA||'—'}</span>
+        <span ${q.correct==='B'?'style="color:#16a34a;font-weight:800"':''}>${q.correct==='B'?'✓ ':''}B: ${q.optB||'—'}</span>
+        <span ${q.correct==='C'?'style="color:#16a34a;font-weight:800"':''}>${q.correct==='C'?'✓ ':''}C: ${q.optC||'—'}</span>
+        <span ${q.correct==='D'?'style="color:#16a34a;font-weight:800"':''}>${q.correct==='D'?'✓ ':''}D: ${q.optD||'—'}</span>
+      </div>
+      ${q.explanation?`<div style="margin-top:5px;font-size:11px;color:#94a3b8">💡 ${q.explanation}</div>`:''}
+    </div>`).join('') : '<div style="text-align:center;padding:30px;color:#94a3b8">No questions yet. Add manually or import via Excel.</div>';
+}
+
+function qTab(t) {
+  document.getElementById('qListPanel').style.display = t==='list'?'':'none';
+  document.getElementById('qAddPanel').style.display  = t==='add'?'':'none';
+  document.getElementById('qt-list').className = t==='list'?'btn btn-primary btn-sm':'btn btn-gray btn-sm';
+  document.getElementById('qt-add').className  = t==='add'?'btn btn-primary btn-sm':'btn btn-gray btn-sm';
+  document.getElementById('qt-list').style = 'flex:1;justify-content:center;border-radius:8px';
+  document.getElementById('qt-add').style  = 'flex:1;justify-content:center;border-radius:8px';
+}
+
+async function saveQuestionInline() {
+  await saveQuestionData({ question:v('qq'), optA:v('qoa'), optB:v('qob'), optC:v('qoc'), optD:v('qod'), correct:v('qcor'), explanation:v('qex') });
+  ['qq','qoa','qob','qoc','qod','qex'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+}
+
+async function saveQuestionData(d) {
+  if (!d.question||!d.optA||!d.optB||!d.optC||!d.optD) { toast('All fields required', 'error'); return; }
+  await db.collection('testTopics').doc(currentTopicId).collection('questions').add({...d, createdAt:ts()});
+  await db.collection('testTopics').doc(currentTopicId).update({ questionCount:firebase.firestore.FieldValue.increment(1) });
+  loadQuestions(); loadTopics(); toast('Question saved!', 'success');
+}
+
+async function deleteQuestion(qid) {
+  if (!confirm('Delete this question?')) return;
+  await db.collection('testTopics').doc(currentTopicId).collection('questions').doc(qid).delete();
+  await db.collection('testTopics').doc(currentTopicId).update({ questionCount:firebase.firestore.FieldValue.increment(-1) });
+  loadQuestions(); loadTopics(); toast('Deleted','success');
+}
+
+// Add Topic
+function openModal_addTopic(data={}) {
+  document.getElementById('modalTitle').textContent = data.id?'Edit Topic':'New Test Topic';
+  document.getElementById('modalBody').innerHTML = `
+    <div style="margin-bottom:12px"><label class="lbl">Topic Name</label><input id="m-tName" class="inp" value="${data.name||''}" placeholder="e.g. Vocab - A Letters"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
+      <div><label class="lbl">Duration (minutes)</label><input id="m-tDur" type="number" class="inp" value="${data.duration||30}" min="5" max="180"></div>
+      <div style="display:flex;flex-direction:column;gap:5px"><label class="lbl">Difficulty</label>
+        <select id="m-tDiff" class="inp">
+          <option value="easy" ${data.difficulty==='easy'?'selected':''}>Easy</option>
+          <option value="medium" ${data.difficulty==='medium'||!data.difficulty?'selected':''}>Medium</option>
+          <option value="hard" ${data.difficulty==='hard'?'selected':''}>Hard</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button onclick="closeModal()" class="btn btn-gray" style="flex:1;justify-content:center">Cancel</button>
+      <button onclick="saveTopic('${data.id||''}')" class="btn btn-accent" style="flex:2;justify-content:center">💾 Save Topic</button>
+    </div>`;
+}
+
+async function saveTopic(id) {
+  const d = { name:v('m-tName'), duration:parseInt(v('m-tDur'))||30, difficulty:v('m-tDiff') };
+  if (!d.name) { toast('Topic name required', 'error'); return; }
+  try {
+    id ? await db.collection('testTopics').doc(id).update(d)
+       : await db.collection('testTopics').add({...d, questionCount:0, createdAt:ts()});
+    closeModal(); loadTopics(); toast('Topic saved!', 'success');
+  } catch(e) { toast('Error: '+e.message, 'error'); }
+}
+
+async function editTopic(id) { const doc=await db.collection('testTopics').doc(id).get(); openModal_addTopic({id,...doc.data()}); openModalBox(); }
+
+async function deleteTopic(id) {
+  if (!confirm('Delete topic and ALL its questions?')) return;
+  // Delete all questions
+  const snap = await db.collection('testTopics').doc(id).collection('questions').get();
+  const batch = db.batch();
+  snap.docs.forEach(d => batch.delete(d.ref));
+  batch.delete(db.collection('testTopics').doc(id));
+  await batch.commit();
+  if (currentTopicId===id) { currentTopicId=null; document.getElementById('qManager').style.display='none'; document.getElementById('qPlaceholder').style.display=''; }
+  loadTopics(); toast('Topic deleted','success');
+}
+
+// Bulk Excel Upload
+function openModal_bulkUpload() {
+  document.getElementById('modalTitle').textContent = 'Bulk Upload Questions via Excel';
+  document.getElementById('modalBody').innerHTML = `
+    <div class="excel-info">
+      <div style="font-weight:800;font-size:13px;color:#166534;margin-bottom:8px">📋 Excel Template Format</div>
+      <p style="font-size:12px;color:#16a34a;margin-bottom:8px">Your Excel file should have these exact column headers:</p>
+      <code>question</code> <code>option_a</code> <code>option_b</code> <code>option_c</code> <code>option_d</code> <code>correct_answer</code> <code>explanation</code>
+      <p style="font-size:11px;color:#166534;margin-top:8px">• <strong>correct_answer</strong>: must be A, B, C, or D<br>• <strong>explanation</strong>: optional</p>
+    </div>
+    <button onclick="downloadExcelTemplate()" class="btn btn-success" style="margin-bottom:16px">⬇️ Download Template (.xlsx)</button>
+    <div style="margin-bottom:12px">
+      <label class="lbl">Upload Excel File</label>
+      <input type="file" id="excelFile" accept=".xlsx,.xls,.csv" class="inp" onchange="parseExcelFile(event)" style="cursor:pointer">
+    </div>
+    <div id="excelPreview" style="display:none">
+      <div id="excelSummary" style="font-weight:800;color:#16a34a;margin-bottom:10px"></div>
+      <div id="excelSampleRows" style="max-height:200px;overflow-y:auto;margin-bottom:14px"></div>
+      <button onclick="bulkSaveQuestions()" class="btn btn-success" style="width:100%;justify-content:center">⬆️ Upload All Questions</button>
+    </div>`;
+}
+
+function downloadExcelTemplate() {
+  if (!window.XLSX) { toast('XLSX library not loaded', 'error'); return; }
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet([
+    ['question','option_a','option_b','option_c','option_d','correct_answer','explanation'],
+    ['What is the synonym of HAPPY?','Sad','Joyful','Angry','Tired','B','Joyful means full of joy, i.e., happy'],
+    ['Capital of India?','Mumbai','Chennai','New Delhi','Kolkata','C','New Delhi has been the capital since 1947'],
+    ['2 + 2 = ?','3','4','5','6','B','Basic arithmetic']
+  ]);
+  ws['!cols'] = [{wch:40},{wch:20},{wch:20},{wch:20},{wch:20},{wch:15},{wch:40}];
+  XLSX.utils.book_append_sheet(wb, ws, 'Questions');
+  XLSX.writeFile(wb, 'SSCMate_Question_Template.xlsx');
+  toast('Template downloaded!', 'success');
+}
+
+function parseExcelFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(new Uint8Array(e.target.result), {type:'array'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws);
+      pendingExcelQs = rows.filter(r => r.question && r.option_a && r.correct_answer).map(r=>({
+        question: String(r.question||'').trim(),
+        optA: String(r.option_a||'').trim(),
+        optB: String(r.option_b||'').trim(),
+        optC: String(r.option_c||'').trim(),
+        optD: String(r.option_d||'').trim(),
+        correct: String(r.correct_answer||'A').trim().toUpperCase().charAt(0),
+        explanation: String(r.explanation||'').trim()
+      }));
+      document.getElementById('excelSummary').textContent = `✅ ${pendingExcelQs.length} valid questions found`;
+      document.getElementById('excelSampleRows').innerHTML = pendingExcelQs.slice(0,5).map((q,i)=>`
+        <div style="background:#f8fafc;border-radius:8px;padding:10px;margin-bottom:6px;font-size:12px">
+          <div style="font-weight:700;margin-bottom:4px">Q${i+1}: ${q.question}</div>
+          <div style="color:#64748b">A:${q.optA} | B:${q.optB} | C:${q.optC} | D:${q.optD} | ✓:${q.correct}</div>
+        </div>`).join('') + (pendingExcelQs.length>5?`<div style="color:#94a3b8;font-size:11px;text-align:center">...and ${pendingExcelQs.length-5} more</div>`:'');
+      document.getElementById('excelPreview').style.display = '';
+    } catch(err) { toast('Error parsing Excel: '+err.message, 'error'); }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+async function bulkSaveQuestions() {
+  if (!pendingExcelQs.length || !currentTopicId) { toast('No questions or topic selected', 'error'); return; }
+  const btn = event.target;
+  btn.disabled = true; btn.innerHTML = 'Uploading...';
+  try {
+    const batch = db.batch();
+    pendingExcelQs.forEach(q => {
+      const ref = db.collection('testTopics').doc(currentTopicId).collection('questions').doc();
+      batch.set(ref, {...q, createdAt:ts()});
+    });
+    await batch.commit();
+    await db.collection('testTopics').doc(currentTopicId).update({ questionCount:firebase.firestore.FieldValue.increment(pendingExcelQs.length) });
+    closeModal(); loadQuestions(); loadTopics();
+    toast(`${pendingExcelQs.length} questions uploaded!`, 'success');
+    pendingExcelQs = [];
+  } catch(e) { toast('Error: '+e.message, 'error'); btn.disabled=false; btn.innerHTML='⬆️ Upload All Questions'; }
+}
+
+// Add Question via modal
+function openModal_addQuestion() {
+  document.getElementById('modalTitle').textContent = 'Add Question to: ' + currentTopicName;
+  document.getElementById('modalBody').innerHTML = `
+    <div style="margin-bottom:12px"><label class="lbl">Question</label><textarea id="m-qq" class="inp" rows="3" placeholder="Enter your question..."></textarea></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+      <div><label class="lbl">Option A</label><input id="m-qoa" class="inp" placeholder="Option A"></div>
+      <div><label class="lbl">Option B</label><input id="m-qob" class="inp" placeholder="Option B"></div>
+      <div><label class="lbl">Option C</label><input id="m-qoc" class="inp" placeholder="Option C"></div>
+      <div><label class="lbl">Option D</label><input id="m-qod" class="inp" placeholder="Option D"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+      <div><label class="lbl">Correct Answer</label>
+        <select id="m-qcor" class="inp"><option>A</option><option>B</option><option>C</option><option>D</option></select>
+      </div>
+      <div><label class="lbl">Explanation (optional)</label><input id="m-qex" class="inp" placeholder="Brief explanation..."></div>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button onclick="closeModal()" class="btn btn-gray" style="flex:1;justify-content:center">Cancel</button>
+      <button onclick="saveQFromModal()" class="btn btn-success" style="flex:2;justify-content:center">✓ Save Question</button>
+    </div>`;
+}
+
+async function saveQFromModal() {
+  await saveQuestionData({ question:v('m-qq'), optA:v('m-qoa'), optB:v('m-qob'), optC:v('m-qoc'), optD:v('m-qod'), correct:v('m-qcor'), explanation:v('m-qex') });
+  closeModal();
+}
+
+// ══════════════════════════════════════
+// 🎟️ COUPONS
+// ══════════════════════════════════════
+async function loadCoupons() {
+  const snap = await db.collection('coupons').orderBy('createdAt','desc').get();
+  const rows = snap.docs.map(d=>({id:d.id,...d.data()}));
+  document.getElementById('couponTbl').innerHTML = `
+    <table class="tbl">
+      <thead><tr><th>Code</th><th>Discount</th><th>Max Uses</th><th>Used</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>${rows.length ? rows.map(c=>`<tr>
+        <td><strong style="font-family:monospace;font-size:14px;letter-spacing:1px">${c.code}</strong></td>
+        <td><span class="badge badge-orange">${c.discount}% OFF</span></td>
+        <td>${c.maxUses===-1?'Unlimited':c.maxUses}</td>
+        <td>${c.usedCount||0}</td>
+        <td>
+          <button onclick="toggleCoupon('${c.id}',${!c.active})" class="toggle ${c.active?'on':''}" style="cursor:pointer"></button>
+        </td>
+        <td><div style="display:flex;gap:6px">
+          <button onclick="editCoupon('${c.id}')" class="btn btn-gray btn-sm">✏️</button>
+          <button onclick="deleteCoupon('${c.id}')" class="btn btn-danger btn-sm">🗑️</button>
+        </div></td>
+      </tr>`).join('') : '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:30px">No coupons yet</td></tr>'}</tbody>
+    </table>`;
+}
+
+function openModal_addCoupon(data={}) {
+  document.getElementById('modalTitle').textContent = data.id?'Edit Coupon':'New Coupon Code';
+  document.getElementById('modalBody').innerHTML = `
+    <div style="margin-bottom:12px"><label class="lbl">Coupon Code</label><input id="m-cpCode" class="inp" value="${data.code||''}" placeholder="e.g. EXAM50" style="text-transform:uppercase;font-family:monospace;font-weight:800;letter-spacing:2px" oninput="this.value=this.value.toUpperCase()"></div>
+    <div style="margin-bottom:12px"><label class="lbl">Discount Percentage</label>
+      <input id="m-cpDisc" type="number" class="inp" value="${data.discount||''}" placeholder="e.g. 50" min="1" max="100">
+    </div>
+    <div style="margin-bottom:12px">
+      <label class="lbl">Usage Limit</label>
+      <select id="m-cpLimitType" class="inp" onchange="toggleCpLimit()">
+        <option value="unlimited" ${data.maxUses===-1||data.maxUses===undefined?'selected':''}>Unlimited Uses</option>
+        <option value="limited" ${data.maxUses>0?'selected':''}>Limited Uses</option>
+      </select>
+    </div>
+    <div id="cpLimitField" style="margin-bottom:20px;${(data.maxUses>0&&data.maxUses!==-1)?'':'display:none'}">
+      <label class="lbl">Maximum Uses</label>
+      <input id="m-cpMax" type="number" class="inp" value="${data.maxUses||100}" placeholder="e.g. 100">
+    </div>
+    <div style="display:flex;gap:10px">
+      <button onclick="closeModal()" class="btn btn-gray" style="flex:1;justify-content:center">Cancel</button>
+      <button onclick="saveCoupon('${data.id||''}')" class="btn btn-accent" style="flex:2;justify-content:center">💾 Save Coupon</button>
+    </div>`;
+}
+
+function toggleCpLimit() {
+  const isLtd = document.getElementById('m-cpLimitType')?.value === 'limited';
+  const f = document.getElementById('cpLimitField');
+  if (f) f.style.display = isLtd ? '' : 'none';
+}
+
+async function saveCoupon(id) {
+  const code = v('m-cpCode'); const disc = parseFloat(v('m-cpDisc'));
+  const ltd  = document.getElementById('m-cpLimitType')?.value === 'limited';
+  if (!code||!disc) { toast('Code and discount required', 'error'); return; }
+  const d = { code, discount:disc, maxUses:ltd?parseInt(v('m-cpMax'))||100:-1, active:true };
+  try {
+    id ? await db.collection('coupons').doc(id).update(d)
+       : await db.collection('coupons').add({...d, usedCount:0, createdAt:ts()});
+    closeModal(); loadCoupons(); toast('Coupon saved!', 'success');
+  } catch(e) { toast('Error: '+e.message, 'error'); }
+}
+
+async function editCoupon(id) { const doc=await db.collection('coupons').doc(id).get(); openModal_addCoupon({id,...doc.data()}); openModalBox(); }
+async function deleteCoupon(id) { if(!confirm('Delete?')) return; await db.collection('coupons').doc(id).delete(); loadCoupons(); toast('Deleted','success'); }
+async function toggleCoupon(id, active) { await db.collection('coupons').doc(id).update({active}); loadCoupons(); }
+
+// ══════════════════════════════════════
+// 👥 USERS
+// ══════════════════════════════════════
+async function loadUsers() {
+  const snap = await db.collection('users').orderBy('lastLogin','desc').limit(100).get().catch(() => db.collection('users').get());
+  const users = snap.docs.map(d=>({id:d.id,...d.data()}));
+  document.getElementById('userCount').textContent = users.length+' users';
+  document.getElementById('userTbl').innerHTML = `
+    <table class="tbl">
+      <thead><tr><th>Phone / Email</th><th>Role</th><th>Joined</th><th>Last Login</th><th>Actions</th></tr></thead>
+      <tbody>${users.length ? users.map(u=>`<tr>
+        <td><strong>${u.phone||u.email||'—'}</strong></td>
+        <td><span class="badge ${u.role==='admin'?'badge-red':'badge-blue'}">${u.role||'user'}</span></td>
+        <td style="font-size:12px;color:#94a3b8">${fmtDate(u.createdAt)}</td>
+        <td style="font-size:12px;color:#94a3b8">${fmtDate(u.lastLogin)}</td>
+        <td><div style="display:flex;gap:6px">
+          ${u.role!=='admin'?`<button onclick="setRole('${u.id}','admin')" class="btn btn-gray btn-sm" title="Make Admin">🛡️</button>`:''}
+          <button onclick="setRole('${u.id}','user')" class="btn btn-gray btn-sm" title="Set as User">👤</button>
+        </div></td>
+      </tr>`).join('') : '<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:30px">No users</td></tr>'}</tbody>
+    </table>`;
+}
+
+async function setRole(uid, role) { await db.collection('users').doc(uid).update({role}); loadUsers(); toast('Role updated','success'); }
+
+// ══════════════════════════════════════
+// 🔗 SOCIAL LINKS
+// ══════════════════════════════════════
+async function loadSocial() {
+  const snap = await db.collection('socialLinks').orderBy('order','asc').get().catch(()=>db.collection('socialLinks').get());
+  const rows = snap.docs.map(d=>({id:d.id,...d.data()}));
+  document.getElementById('socialTbl').innerHTML = `
+    <table class="tbl">
+      <thead><tr><th>Platform</th><th>Name</th><th>URL</th><th>Icon</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>${rows.length ? rows.map(l=>`<tr>
+        <td></td>
+        <td><strong>${l.name}</strong></td>
+        <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px"><a href="${l.url}" target="_blank" style="color:#2563eb">${l.url}</a></td>
+        <td><code style="font-size:11px;background:#f1f5f9;padding:2px 6px;border-radius:4px">${l.icon||'link'}</code></td>
+        <td><button onclick="toggleSocial('${l.id}',${!l.active})" class="toggle ${l.active?'on':''}"></button></td>
+        <td><div style="display:flex;gap:6px">
+          <button onclick="editSocial('${l.id}')" class="btn btn-gray btn-sm">✏️</button>
+          <button onclick="deleteSocial('${l.id}')" class="btn btn-danger btn-sm">🗑️</button>
+        </div></td>
+      </tr>`).join('') : '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:30px">No social links</td></tr>'}</tbody>
+    </table>`;
+}
+
+function openModal_addSocial(data={}) {
+  document.getElementById('modalTitle').textContent = data.id?'Edit Social Link':'Add Social Link';
+  document.getElementById('modalBody').innerHTML = `
+    <div style="margin-bottom:12px"><label class="lbl">Name</label><input id="m-slName" class="inp" value="${data.name||''}" placeholder="e.g. YouTube Channel, Telegram Group"></div>
+    <div style="margin-bottom:12px"><label class="lbl">URL</label><input id="m-slUrl" class="inp" value="${data.url||''}" placeholder="https://..."></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+      <div>
+        <label class="lbl">Font Awesome Brand Icon</label>
+        <input id="m-slIcon" class="inp" value="${data.icon||'link'}" placeholder="youtube, telegram, whatsapp...">
+        <div style="font-size:11px;color:#94a3b8;margin-top:4px">fa-brands fa-<strong>this</strong></div>
+      </div>
+      <div><label class="lbl">Icon Color (hex)</label><input id="m-slColor" class="inp" value="${data.color||'1e3a5f'}" placeholder="e.g. ff0000" oninput="document.getElementById('colorPrev').style.color='#'+this.value"><div id="colorPrev" style="font-size:22px;margin-top:4px;color:#${data.color||'1e3a5f'}"><i class="fa-brands fa-${data.icon||'link'}"></i></div></div>
+    </div>
+    <div style="margin-bottom:20px"><label class="lbl">Display Order</label><input id="m-slOrder" type="number" class="inp" value="${data.order||1}"></div>
+    <div style="display:flex;gap:10px">
+      <button onclick="closeModal()" class="btn btn-gray" style="flex:1;justify-content:center">Cancel</button>
+      <button onclick="saveSocial('${data.id||''}')" class="btn btn-accent" style="flex:2;justify-content:center">💾 Save Link</button>
+    </div>`;
+}
+
+async function saveSocial(id) {
+  const d = { name:v('m-slName'), url:v('m-slUrl'), icon:v('m-slIcon'), color:v('m-slColor'), order:parseInt(v('m-slOrder'))||1, active:true };
+  if (!d.name||!d.url) { toast('Name and URL required', 'error'); return; }
+  try {
+    id ? await db.collection('socialLinks').doc(id).update(d)
+       : await db.collection('socialLinks').add({...d, createdAt:ts()});
+    closeModal(); loadSocial(); toast('Link saved!', 'success');
+  } catch(e) { toast('Error: '+e.message, 'error'); }
+}
+
+async function editSocial(id) { const doc=await db.collection('socialLinks').doc(id).get(); openModal_addSocial({id,...doc.data()}); openModalBox(); }
+async function deleteSocial(id) { if(!confirm('Delete?')) return; await db.collection('socialLinks').doc(id).delete(); loadSocial(); toast('Deleted','success'); }
+async function toggleSocial(id, active) { await db.collection('socialLinks').doc(id).update({active}); loadSocial(); }
+
+// ══════════════════════════════════════
+// ⚙️ SETTINGS
+// ══════════════════════════════════════
+async function loadSettings() {
+  try {
+    const doc = await db.collection('settings').doc('app').get();
+    if (doc.exists) {
+      const d = doc.data();
+      if (d.razorpayKey) document.getElementById('sRzpKey').value = d.razorpayKey;
+      if (d.groqKey)     document.getElementById('sGroqKey').value = d.groqKey;
+      if (d.appName)     document.getElementById('sAppName').value = d.appName;
+      if (d.whatsapp)    document.getElementById('sWaNum').value = d.whatsapp;
+      if (d.adminEmail)  document.getElementById('sAdminEmail').value = d.adminEmail;
+    }
+  } catch(e) {}
+}
+
+async function saveSettings() {
+  try {
+    await db.collection('settings').doc('app').set({ razorpayKey:v('sRzpKey'), groqKey:v('sGroqKey') }, {merge:true});
+    toast('API keys saved!', 'success');
+  } catch(e) { toast('Error: '+e.message, 'error'); }
+}
+
+async function saveAppInfo() {
+  try {
+    await db.collection('settings').doc('app').set({ appName:v('sAppName'), whatsapp:v('sWaNum'), adminEmail:v('sAdminEmail') }, {merge:true});
+    toast('App info saved!', 'success');
+  } catch(e) { toast('Error: '+e.message, 'error'); }
+}
+
+// ══════════════════════════════════════
+// 🔧 MODAL SYSTEM
+// ══════════════════════════════════════
+const MODAL_FNS = {
+  addBanner: openModal_addBanner, addVideo: openModal_addVideo, addEbook: openModal_addEbook,
+  addTopic: openModal_addTopic, addQuestion: openModal_addQuestion, bulkUpload: openModal_bulkUpload,
+  addCoupon: openModal_addCoupon, addSocial: openModal_addSocial
+};
+
+function openModal(type, data={}) {
+  const fn = MODAL_FNS[type];
+  if (!fn) return;
+  fn(data);
+  openModalBox();
+}
+
+function openModalBox() {
+  document.getElementById('modal').style.display = 'flex';
+  document.getElementById('modalBox').scrollTop = 0;
+}
+
+function closeModal() { document.getElementById('modal').style.display = 'none'; }
+
+// ══════════════════════════════════════
+// 🛠️ UTILS
+// ══════════════════════════════════════
+function v(id) { return (document.getElementById(id)?.value||'').trim(); }
+function ts()  { return firebase.firestore.FieldValue.serverTimestamp(); }
+function escQ(s) { return (s||'').replace(/'/g,"\\'"); }
+function extractYtId(url) {
+  if (!url) return '';
+  if (/^[a-zA-Z0-9_-]{11}$/.test(url)) return url;
+  const m = url.match(/(?:v=|\/embed\/|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  return m ? m[1] : '';
+}
+function fmtDate(ts) {
+  if (!ts) return '—';
+  const d = ts.toDate ? ts.toDate() : new Date(ts.seconds*1000);
+  return d.toLocaleDateString('en-IN', {day:'numeric',month:'short',year:'numeric'});
+}
+
+let toastTimer;
+function toast(msg, type='') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.background = type==='error'?'#dc2626':type==='success'?'#16a34a':'#1e293b';
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>el.classList.remove('show'), 3500);
+}
+
+// Responsive
+if (window.innerWidth <= 768) { document.getElementById('menuBtn').style.display = 'flex'; }
+</script>
+</body>
+</html>

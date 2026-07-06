@@ -858,18 +858,12 @@ function startContentListeners() {
     });
   });
   // Playlists (for videos)
-  const uP = db.collection('playlists').orderBy('order','asc').onSnapshot(snap => {
-    S.playlists = snap.docs.map(d => ({id:d.id, ...d.data()}));
-    // Re-render playlist tabs if on videos screen
-    if (S.screen === 'videos') renderPlaylistTabs();
-    // Also re-render home video preview
-    if (S.screen === 'home') renderHomeVideos();
+  const uP = db.collection('playlists').orderBy('order','asc').onSnapshot(s => {
+    S.playlists = s.docs.map(d=>({id:d.id,...d.data()}));
+    renderPlaylistTabs();
   }, () => {
-    // Fallback without orderBy (if index not ready)
-    db.collection('playlists').onSnapshot(snap => {
-      S.playlists = snap.docs.map(d => ({id:d.id, ...d.data()}))
-        .sort((a,b) => (a.order||99) - (b.order||99));
-      if (S.screen === 'videos') renderPlaylistTabs();
+    db.collection('playlists').onSnapshot(s => {
+      S.playlists = s.docs.map(d=>({id:d.id,...d.data()}));
     });
   });
 
@@ -1124,56 +1118,24 @@ let _currentPlaylist = 'all';
 function renderPlaylistTabs() {
   const row = document.getElementById('playlistTabRow');
   if (!row) return;
-
-  // ── Use S.playlists (from Firestore playlists collection) ordered by 'order' field
-  // Fallback: derive from video data if no playlists in Firestore
-  let playlists = [];
-  if (S.playlists && S.playlists.length) {
-    // Use Firestore playlists (correctly ordered)
-    playlists = S.playlists.map(p => p.name);
-  } else {
-    // Fallback: unique names from videos
-    playlists = [...new Set(S.videos.map(v => v.playlist).filter(Boolean))];
-  }
-
-  // Build tabs
-  let tabs = `<button class="pl-tab ${_currentPlaylist==='all'?'active':''}" onclick="filterVideosByPlaylist('all')">
-    📹 All <span style="opacity:.7;font-size:10px">(${S.videos.length})</span>
-  </button>`;
-
-  tabs += playlists.map(pl => {
-    const count = S.videos.filter(v => v.playlist === pl).length;
-    const safe  = pl.replace(/'/g, "\\'");
-    return `<button class="pl-tab ${_currentPlaylist===pl?'active':''}" onclick="filterVideosByPlaylist('${safe}')">
-      ${pl} <span style="opacity:.7;font-size:10px">(${count})</span>
-    </button>`;
-  }).join('');
-
+  // Get unique playlists from videos
+  const playlists = [...new Set(S.videos.map(v => v.playlist).filter(Boolean))];
+  let tabs = '<button class="pl-tab ' + (_currentPlaylist==='all'?'active':'') + '" id="plt-all" onclick="filterVideosByPlaylist(\'all\')">📹 All Videos</button>';
+  tabs += playlists.map(pl =>
+    `<button class="pl-tab ${_currentPlaylist===pl?'active':''}" onclick="filterVideosByPlaylist('${pl.replace(/'/g,'\\\'')}')">${pl}</button>`
+  ).join('');
   row.innerHTML = tabs;
 }
 
 function filterVideosByPlaylist(pl) {
   _currentPlaylist = pl;
   renderPlaylistTabs();
-
-  const filtered = pl === 'all'
-    ? S.videos
-    : S.videos.filter(v => v.playlist === pl);
-
+  const filtered = pl === 'all' ? S.videos : S.videos.filter(v => v.playlist === pl);
   const el = document.getElementById('videoList');
   if (!el) return;
-
-  if (!filtered.length) {
-    el.innerHTML = `
-      <div style="text-align:center;padding:48px 20px;color:#94a3b8">
-        <div style="font-size:40px;margin-bottom:10px">📹</div>
-        <div style="font-weight:700;font-size:15px;color:#1e293b;margin-bottom:4px">${pl === 'all' ? 'No videos yet' : `"${pl}" playlist`}</div>
-        <div style="font-size:13px">${pl === 'all' ? 'Admin will add videos soon.' : 'Is playlist mein abhi koi video nahi hai.'}</div>
-      </div>`;
-    return;
-  }
-
-  el.innerHTML = filtered.map(videoCard).join('');
+  el.innerHTML = filtered.length
+    ? filtered.map(videoCard).join('')
+    : '<div style="text-align:center;padding:40px;color:#94a3b8">No videos in this playlist yet</div>';
 }
 
 function renderVideos() {
